@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.local/
+.env
+.env.*
+!.env.example
+*.tar.gz
+*.tar
+.sites-runtime/
+*.log
+.vercel/
+.openai/
