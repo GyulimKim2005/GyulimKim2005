@@ -4,20 +4,14 @@
   if(!orbit)return;
   const items=[...orbit.querySelectorAll('[data-orbit-index]')];
   const path=document.getElementById('orbit-path');
-  // Trace only the visible arc. Its two ends form the carousel's wrap boundary.
-  const startAngle=-130.21313947,endAngle=-400;
-  const width=1016,height=533,cx=500.8930192,cy=276.3526379,rx=397.64467188,ry=203.87399943,tilt=-.02065380861;
+  const width=1016,height=533;
   let rotation=0,gesture=null,frame=0,suppressUntil=0;
-  const radians=angle=>angle*Math.PI/180;
-  const point=angle=>{const x=rx*Math.cos(radians(angle)),y=ry*Math.sin(radians(angle));return {x:cx+x*Math.cos(tilt)-y*Math.sin(tilt),y:cy+x*Math.sin(tilt)+y*Math.cos(tilt)};};
-  // A cumulative-length table keeps both spacing and speed independent of curvature.
-  const points=[];
-  for(let i=0;i<=800;i++){
-    const p=point(startAngle+(endAngle-startAngle)*i/800),previous=points.at(-1);
-    points.push({...p,distance:previous?previous.distance+Math.hypot(p.x-previous.x,p.y-previous.y):0});
-  }
+  // Read the artwork's fixed centreline. Rotation never rewrites its visible outline.
+  const points=[...path.getAttribute('d').matchAll(/[ML]([\d.-]+) ([\d.-]+)/g)].map(match=>({x:Number(match[1]),y:Number(match[2])}));
+  points.forEach((point,i)=>{const previous=points[i-1];point.distance=previous?previous.distance+Math.hypot(point.x-previous.x,point.y-previous.y):0;});
   const length=points.at(-1).distance,spacing=length/items.length;
-  path.setAttribute('d',points.map((p,i)=>(i?'L':'M')+p.x.toFixed(3)+' '+p.y.toFixed(3)).join(' '));
+  // Preserve the reference's initial placements and their arc-length gaps at every curvature.
+  const anchors=path.dataset.homeProgress.split(',').map(progress=>Number(progress)*length);
   const wrap=value=>((value%length)+length)%length;
   function atDistance(value){
     const distance=wrap(value);let low=0,high=points.length-1;
@@ -27,7 +21,7 @@
   }
   function render(){
     items.forEach((item,i)=>{
-      const p=atDistance(i*spacing+rotation);
+      const p=atDistance(anchors[i]+rotation);
       item.style.left=p.x/width*100+'%';item.style.top=p.y/height*100+'%';
       // This is a position rule, not a DEV-specific label style.
       item.classList.toggle('label-upper-left',p.x<190&&p.y>235&&p.y<375);

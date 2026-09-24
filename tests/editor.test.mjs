@@ -127,10 +127,12 @@ test('rabbit count is visible only while held; orbit rotation does not navigate 
   link.click();assert.equal(w.location.pathname,'/interests');
 });
 
-test('orbit menus keep equal arc distances, stay on the visible ring and move their labels with position',async t=>{
+test('orbit keeps the reference outline and menu spacing while links follow the visible arc',async t=>{
   const ui=await editor(t),d=ui.document,w=ui.w,orbit=d.getElementById('orbit'),ring=d.getElementById('orbit-path'),fixed=ring.getAttribute('d');
+  const outline=d.getElementById('orbit-shape'),fixedOutline=outline.getAttribute('d');
   const points=[...fixed.matchAll(/[ML]([\d.-]+) ([\d.-]+)/g)].map(m=>({x:Number(m[1]),y:Number(m[2])}));
   let length=0;points.forEach((p,i)=>{if(i)length+=Math.hypot(p.x-points[i-1].x,p.y-points[i-1].y);p.distance=length;});
+  let initialGaps;
   function verify(){
     const distances=[...orbit.querySelectorAll('.orbit-item')].map(item=>{
       const x=parseFloat(item.style.left)*1016/100,y=parseFloat(item.style.top)*533/100;let error=Infinity,distance;
@@ -139,10 +141,20 @@ test('orbit menus keep equal arc distances, stay on the visible ring and move th
         if(e<error){error=e;distance=a.distance+(b.distance-a.distance)*t;}
       }
       assert(error<.01,'menu centre must remain on the drawn line');return distance;
-    }).sort((a,b)=>a-b);
-    distances.forEach((value,i)=>{const gap=i===4?length+distances[0]-value:distances[i+1]-value;assert(Math.abs(gap-length/5)<.01,'spacing must not change with curvature or wrapping');});
+    });
+    const gaps=distances.map((value,i)=>(distances[(i+1)%distances.length]-value+length)%length);
+    if(!initialGaps)initialGaps=gaps;
+    gaps.forEach((gap,i)=>assert(Math.abs(gap-initialGaps[i])<.01,'reference spacing must not change with curvature or wrapping'));
     assert.equal(ring.getAttribute('d'),fixed);
+    assert.equal(outline.getAttribute('d'),fixedOutline);
   }
+  // Positions measured from the supplied 1108 × 621 artwork, projected onto its ink.
+  const reference=[[201.5,354],[138,455],[279,529],[441,512],[520,400]];
+  [...orbit.querySelectorAll('.orbit-item')].forEach((item,i)=>{
+    const x=1108*(.07408398+parseFloat(item.style.left)/100*.45342969);
+    const y=621*(.4709566+parseFloat(item.style.top)/100*.42288368);
+    assert(Math.hypot(x-reference[i][0],y-reference[i][1])<10,'initial menu must match the reference composition');
+  });
   verify();assert(d.querySelector('[data-orbit-index="1"]').classList.contains('label-upper-left'));
   d.getElementById('orbit-next').click();verify();
   assert(d.querySelector('[data-orbit-index="0"]').classList.contains('label-upper-left'));

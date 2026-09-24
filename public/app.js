@@ -15,7 +15,7 @@
     if(!response.ok)throw new Error(value.error||'처리하지 못했어요. 다시 시도해 주세요.');
     return value;
   }
-  function ownerUI(){document.querySelectorAll('.owner-only').forEach(el=>el.hidden=!owner);$('edit-profile').hidden=!owner||!['about','interests','cv'].includes(page);$('sign-in').hidden=owner;$('sign-out').hidden=!owner||localMode;['edit-profile','new-entry','home-new-entry','new-project','new-book','new-topic','new-cvitem'].forEach(id=>$(id).disabled=!state.profile);}
+  function ownerUI(){document.querySelectorAll('.owner-only').forEach(el=>el.hidden=!owner);$('edit-profile').hidden=!owner||!['about','interests','cv'].includes(page);$('sign-in').hidden=owner;$('sign-out').hidden=!owner||localMode;['edit-profile','new-entry','new-project','new-book','new-topic','new-cvitem'].forEach(id=>$(id).disabled=!state.profile);}
   function openDialog(dialog){returnFocus=document.activeElement;dialog.showModal();document.body.classList.add('modal-open');}
   function closeDialog(dialog){dialog.close();if(!document.querySelector('dialog[open]'))document.body.classList.remove('modal-open');}
   function renderProfile(){
@@ -26,7 +26,6 @@
     $('about-affiliation').textContent=p.affiliation;
     $('profile-bio').textContent=p.bio;
     $('profile-interests').replaceChildren(...p.interests.map(tag=>node('span','',tag)));
-    $('footer-name').textContent=p.name;
     $('interests-body').textContent=p.interestsText||'';
     $('interests-empty').hidden=!!(p.interests.length||p.interestsText);
     $('cv-body').textContent=p.cv||'';
@@ -57,7 +56,7 @@
   }
   function recentPlaceholder(message=''){
     const placeholder=node('div','recent-card recent-placeholder');
-    if(message)placeholder.append(node('p','',message));else placeholder.setAttribute('aria-hidden','true');
+    if(message)placeholder.append(node('p','sr-only',message));else placeholder.setAttribute('aria-hidden','true');
     return placeholder;
   }
   function renderRecent(){
@@ -122,7 +121,7 @@
     localMode=session.status==='fulfilled'&&session.value.local;
     aiReady=session.status==='fulfilled'&&session.value.aiReady;
     if(content.status==='fulfilled'){state=content.value;render();}else{
-      for(const id of ['entries','recent-posts']){const error=node('div',id==='recent-posts'?'recent-card recent-error':'error-state');error.append(node('p','','기록을 불러오지 못했어요.'));const retry=node('button','subtle-button','다시 불러오기 ↻');retry.type='button';retry.addEventListener('click',load);error.append(retry);$(id).replaceChildren(error);if(id==='recent-posts')for(let i=1;i<5;i++)$(id).append(recentPlaceholder());}ownerUI();
+      for(const id of ['entries','recent-posts']){const error=node('div',id==='recent-posts'?'recent-card recent-error':'error-state');error.append(node('p',id==='recent-posts'?'sr-only':'','기록을 불러오지 못했어요.'));const retry=node('button','subtle-button',id==='recent-posts'?'↻':'다시 불러오기 ↻');retry.setAttribute('aria-label','기록 다시 불러오기');retry.title='기록 다시 불러오기';retry.type='button';retry.addEventListener('click',load);error.append(retry);$(id).replaceChildren(error);if(id==='recent-posts')for(let i=1;i<5;i++)$(id).append(recentPlaceholder());}ownerUI();
     }
   }
   function readEntry(id){
@@ -178,13 +177,11 @@
   $('cancel-delete').addEventListener('click',()=>closeDialog($('confirm-dialog')));
   document.querySelectorAll('.filter').forEach(button=>button.addEventListener('click',()=>{filter=button.dataset.filter;document.querySelectorAll('.filter').forEach(other=>{other.classList.toggle('active',other===button);other.setAttribute('aria-pressed',String(other===button));});renderEntries();}));
   $('new-entry').addEventListener('click',()=>openEditor('entries'));$('new-project').addEventListener('click',()=>openEditor('projects'));$('edit-profile').addEventListener('click',()=>openEditor('profile'));$('edit-entry').addEventListener('click',()=>openEditor('entries',selected));$('delete-entry').addEventListener('click',()=>confirmDelete('entries',selected));
-  $('home-new-entry').addEventListener('click',()=>openEditor('entries'));
   for(const id of ['home-photo','about-photo'])$(id).addEventListener('error',()=>$(id).hidden=true);
   document.querySelectorAll('.close-dialog').forEach(button=>button.addEventListener('click',()=>{const dialog=button.closest('dialog');if(dialog.id==='editor')cancelEditor();else closeDialog(dialog);}));
   document.querySelector('.cancel-editor').addEventListener('click',cancelEditor);
   document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('cancel',event=>{if(dialog.id==='editor'){event.preventDefault();cancelEditor();}});dialog.addEventListener('close',()=>{if(!document.querySelector('dialog[open]')){document.body.classList.remove('modal-open');returnFocus?.focus();}});});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
-  $('year').textContent=String(new Date().getFullYear());
   $('sign-in').addEventListener('click',()=>{$('login-error').hidden=true;openDialog($('login-dialog'));});
   $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('login-submit');button.disabled=true;$('login-error').hidden=true;
