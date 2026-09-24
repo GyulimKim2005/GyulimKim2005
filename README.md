@@ -1,6 +1,6 @@
 # Gyulim Kim — personal archive
 
-사용자의 미리캔버스 시안을 바탕으로 만든 개인 홈페이지입니다. 실제 기록·서재·이력은 사용자가 직접 입력합니다. Vercel 배포와 운영 저장소는 아직 연결하지 않았습니다.
+사용자의 미리캔버스 시안을 바탕으로 만든 개인 홈페이지입니다. 실제 기록·서재·이력은 사용자가 직접 입력합니다. Vercel은 GitHub main 변경을 자동 배포합니다. 운영 저장소는 Supabase를 사용합니다.
 
 ## 화면과 기능
 
@@ -53,15 +53,19 @@ AI_DAILY_LIMIT=20
 
 실제 운영 API 호출은 키 연결 후 검증해야 합니다. 현재는 모의 응답으로 인증·미설정·출처 검사·일일 제한·결과 표시를 검증합니다.
 
-## Vercel 배포 연결 — 아직 배포하지 않음
+## Vercel · Supabase 운영 연결
 
-1. Vercel에서 GitHub 저장소를 가져옵니다. Framework는 Other, `vercel.json` 설정을 사용합니다.
-2. **Private Vercel Blob** 저장소를 연결합니다. `BLOB_READ_WRITE_TOKEN` 환경변수가 필요합니다.
-3. `npm run setup:admin`으로 관리자 키를 생성합니다. `.local/admin-credentials.json`에만 저장되며 기존 파일을 덮어쓰지 않습니다.
-4. 그 파일의 `ADMIN_KEY_HASH`, `SESSION_SECRET`을 서버 환경변수에 추가합니다. `loginKey`로 사이트 하단에서 로그인합니다.
-5. AI 검색을 사용할 경우에만 위의 AI 환경변수를 연결한 뒤 배포합니다.
+[운영 사이트](https://gyulimkim2005.vercel.app/)는 GitHub main 브랜치와 연결되어 자동 배포됩니다.
 
-운영 데이터는 Private Blob의 `personal-archive/content.json`에 저장합니다. ETag 조건부 저장으로 동시 수정 충돌을 막으며 Vercel 함수의 임시 파일시스템을 콘텐츠 저장소로 쓰지 않습니다. 서버 전용 키는 클라이언트에 노출하지 않습니다.
+1. Supabase SQL Editor에서 `supabase/migrations/202609250001_personal_archive.sql`을 실행합니다.
+2. Vercel 서버 환경변수 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`에 프로젝트 URL과 기존 secret key를 연결합니다. 이 키는 브라우저나 Git에 넣지 않습니다.
+3. `npm run setup:admin`으로 관리자 키를 생성합니다. 무시되는 `.local/admin-credentials.json`에만 저장됩니다.
+4. 그 파일의 `ADMIN_KEY_HASH`, `SESSION_SECRET`을 Vercel 서버 환경변수에 추가하고 재배포합니다. `loginKey`로 사이트 하단에서 로그인합니다.
+5. AI 검색은 사용자가 유료 API 연결을 정한 뒤 별도로 켭니다.
+
+운영 콘텐츠는 RLS가 켜진 `public.personal_archive`의 단일 JSON 행에 저장합니다. 익명/일반 인증 사용자의 직접 접근은 차단하고 서버의 service_role만 읽기·삽입·수정을 허용합니다. revision 조건부 UPDATE와 PK 제약으로 동시 저장 충돌을 감지합니다. 공개 API에서는 AI 사용량을 제외하고 표시용 콘텐츠만 반환합니다.
+
+메인은 원본 16:9 캔버스의 좌표로 배치하고 화면에 맞춰 균일하게 축소합니다. 최근 기록은 최대 다섯 개이며, 빈칸·로딩·오류 상태에도 다섯 프레임을 유지합니다. 모바일은 세로 배치와 별도 스크롤 영역을 사용합니다.
 
 ## 코드와 데이터
 
