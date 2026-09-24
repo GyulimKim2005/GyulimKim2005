@@ -10,14 +10,15 @@
   let rotation=0,gesture=null,frame=0,suppressUntil=0;
   const radians=angle=>angle*Math.PI/180;
   const point=angle=>{const x=rx*Math.cos(radians(angle)),y=ry*Math.sin(radians(angle));return {x:cx+x*Math.cos(tilt)-y*Math.sin(tilt),y:cy+x*Math.sin(tilt)+y*Math.cos(tilt)};};
+  // The ring belongs to the fixed illustration. Only menu positions rotate.
+  const points=[];
+  for(let i=0;i<=100;i++){const p=point(angles[0]+(angles[4]-angles[0])*i/100);points.push((i?'L':'M')+p.x.toFixed(2)+' '+p.y.toFixed(2));}
+  path.setAttribute('d',points.join(' '));
   function render(){
     items.forEach((item,i)=>{
       const p=point(angles[i]+rotation);
       item.style.left=p.x/width*100+'%';item.style.top=p.y/height*100+'%';
     });
-    const points=[];
-    for(let i=0;i<=100;i++){const p=point(angles[0]+rotation+(angles[4]-angles[0])*i/100);points.push((i?'L':'M')+p.x.toFixed(2)+' '+p.y.toFixed(2));}
-    path.setAttribute('d',points.join(' '));
     orbit.dataset.rotation=String(Math.round(rotation*100)/100);
   }
   function turn(amount){

@@ -99,8 +99,13 @@ test('rabbit count is visible only while held; orbit rotation does not navigate 
   rabbit.dispatchEvent(new w.KeyboardEvent('keyup',{key:' ',bubbles:true}));assert.equal(counter.hidden,true);assert.equal(w.localStorage.getItem('gyulim-rabbit-pets'),'1');
   rabbit.dispatchEvent(new w.MouseEvent('pointerdown',{button:0,clientX:10,clientY:10,bubbles:true}));assert.equal(counter.hidden,false);w.dispatchEvent(new w.Event('blur'));assert.equal(counter.hidden,true);
   const orbit=d.getElementById('orbit'),link=orbit.querySelector('a');orbit.getBoundingClientRect=()=>({left:0,top:0,width:1000,height:560});
+  const ring=d.getElementById('orbit-path'),fixedRing=ring.getAttribute('d'),initialPosition=link.style.cssText;
   const before=orbit.dataset.rotation;d.getElementById('orbit-next').click();assert.notEqual(orbit.dataset.rotation,before);
+  assert.notEqual(link.style.cssText,initialPosition);assert.equal(ring.getAttribute('d'),fixedRing);
   link.dispatchEvent(new w.MouseEvent('pointerdown',{button:0,clientX:200,clientY:200,bubbles:true}));orbit.dispatchEvent(new w.MouseEvent('pointermove',{button:0,clientX:300,clientY:250,bubbles:true,cancelable:true}));orbit.dispatchEvent(new w.MouseEvent('pointerup',{button:0,bubbles:true}));link.dispatchEvent(new w.MouseEvent('click',{button:0,detail:1,bubbles:true,cancelable:true}));assert.equal(w.location.pathname,'/');
+  assert.equal(ring.getAttribute('d'),fixedRing);
+  orbit.dispatchEvent(new w.WheelEvent('wheel',{deltaY:80,bubbles:true,cancelable:true}));assert.equal(ring.getAttribute('d'),fixedRing);
+  orbit.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Home',bubbles:true}));assert.equal(link.style.cssText,initialPosition);assert.equal(ring.getAttribute('d'),fixedRing);
   link.click();assert.equal(w.location.pathname,'/interests');
 });
 test('login and logout change editing controls without exposing credentials',async t=>{
