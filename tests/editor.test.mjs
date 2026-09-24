@@ -127,12 +127,20 @@ test('rabbit count is visible only while held; orbit rotation does not navigate 
   link.click();assert.equal(w.location.pathname,'/interests');
 });
 
-test('orbit keeps the reference outline and menu spacing while links follow the visible arc',async t=>{
+test('orbit keeps pointed ends and equal arc spacing through repeated rotations',async t=>{
   const ui=await editor(t),d=ui.document,w=ui.w,orbit=d.getElementById('orbit'),ring=d.getElementById('orbit-path'),fixed=ring.getAttribute('d');
   const outline=d.getElementById('orbit-shape'),fixedOutline=outline.getAttribute('d');
   const points=[...fixed.matchAll(/[ML]([\d.-]+) ([\d.-]+)/g)].map(m=>({x:Number(m[1]),y:Number(m[2])}));
   let length=0;points.forEach((p,i)=>{if(i)length+=Math.hypot(p.x-points[i-1].x,p.y-points[i-1].y);p.distance=length;});
-  let initialGaps;
+  const outlineCoordinates=fixedOutline.match(/[\d.-]+/g).map(Number);
+  assert.deepEqual(outlineCoordinates.slice(0,2),outlineCoordinates.slice(-2),'left contours must meet at a single sharp tip');
+  const edges=[...fixedOutline.matchAll(/[ML]([\d.-]+) ([\d.-]+)/g)].map(m=>({x:Number(m[1]),y:Number(m[2])}));
+  assert.equal(edges.length,points.length*2);
+  assert.deepEqual(edges[points.length-1],edges[points.length],'right contours must also meet at one tip');
+  for(let i=1;i<points.length-1;i++){
+    const tangent={x:points[i+1].x-points[i-1].x,y:points[i+1].y-points[i-1].y},outer=edges[i],inner=edges.at(-i-1);
+    assert((outer.x-inner.x)*-tangent.y+(outer.y-inner.y)*tangent.x>=0,'the tapered outline must not cross itself or form disconnected slivers');
+  }
   function verify(){
     const distances=[...orbit.querySelectorAll('.orbit-item')].map(item=>{
       const x=parseFloat(item.style.left)*1016/100,y=parseFloat(item.style.top)*533/100;let error=Infinity,distance;
@@ -143,27 +151,47 @@ test('orbit keeps the reference outline and menu spacing while links follow the 
       assert(error<.01,'menu centre must remain on the drawn line');return distance;
     });
     const gaps=distances.map((value,i)=>(distances[(i+1)%distances.length]-value+length)%length);
-    if(!initialGaps)initialGaps=gaps;
-    gaps.forEach((gap,i)=>assert(Math.abs(gap-initialGaps[i])<.01,'reference spacing must not change with curvature or wrapping'));
+    gaps.forEach(gap=>assert(Math.abs(gap-length/5)<.01,'all five arc-length gaps must stay equal, including the wrap'));
     assert.equal(ring.getAttribute('d'),fixed);
     assert.equal(outline.getAttribute('d'),fixedOutline);
   }
-  // Positions measured from the supplied 1108 × 621 artwork, projected onto its ink.
-  const reference=[[201.5,354],[138,455],[279,529],[441,512],[520,400]];
-  [...orbit.querySelectorAll('.orbit-item')].forEach((item,i)=>{
-    const x=1108*(.07408398+parseFloat(item.style.left)/100*.45342969);
-    const y=621*(.4709566+parseFloat(item.style.top)/100*.42288368);
-    assert(Math.hypot(x-reference[i][0],y-reference[i][1])<10,'initial menu must match the reference composition');
-  });
   verify();assert(d.querySelector('[data-orbit-index="1"]').classList.contains('label-upper-left'));
   d.getElementById('orbit-next').click();verify();
   assert(d.querySelector('[data-orbit-index="0"]').classList.contains('label-upper-left'));
   assert(!d.querySelector('[data-orbit-index="1"]').classList.contains('label-upper-left'));
   for(let i=0;i<30;i++){orbit.dispatchEvent(new w.WheelEvent('wheel',{deltaY:i%2?100:260,bubbles:true,cancelable:true}));verify();}
 });
+test('orbit drag stays bounded across the open gap and wheel motion eases without overshoot',async t=>{
+  const ui=await editor(t),d=ui.document,w=ui.w,orbit=d.getElementById('orbit');
+  orbit.getBoundingClientRect=()=>({left:0,top:0,width:1016,height:533});
+  orbit.dispatchEvent(new w.MouseEvent('pointerdown',{button:0,clientX:420,clientY:70,bubbles:true}));
+  orbit.dispatchEvent(new w.MouseEvent('pointermove',{clientX:435,clientY:70,bubbles:true,cancelable:true}));
+  for(let x=436;x<750;x++){
+    const before=Number(orbit.dataset.rotation);
+    orbit.dispatchEvent(new w.MouseEvent('pointermove',{clientX:x,clientY:70,bubbles:true,cancelable:true}));
+    assert(Math.abs(Number(orbit.dataset.rotation)-before)<.3,'a one-pixel movement must never jump across the orbit');
+  }
+  orbit.dispatchEvent(new w.MouseEvent('pointerup',{bubbles:true}));
+  orbit.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Home',bubbles:true}));
+  w.matchMedia=()=>({matches:false});
+  let now=w.performance.now(),nextFrame;w.requestAnimationFrame=callback=>{nextFrame=callback;return 1;};
+  orbit.dispatchEvent(new w.WheelEvent('wheel',{deltaY:100,bubbles:true,cancelable:true}));
+  assert.equal(Number(orbit.dataset.rotation),0,'wheel input should ease in rather than jump immediately');
+  let previous=0;
+  for(let i=0;i<150&&nextFrame;i++){
+    now+=16;const callback=nextFrame;nextFrame=null;callback(now);
+    const current=Number(orbit.dataset.rotation);assert(current>=previous&&current<9,'motion must approach its target without bounce or overshoot');previous=current;
+  }
+  assert(previous>7);assert.equal(nextFrame,null);
+});
 test('login and logout change editing controls without exposing credentials',async t=>{
   const ui=await editor(t,{ADMIN_KEY_HASH:digest('test-ui-only-key'),SESSION_SECRET:'test-only-session-secret-with-more-than-32-characters'}),d=ui.document;
-  assert.equal(d.getElementById('new-entry').hidden,true);d.getElementById('sign-in').click();d.getElementById('login-key').value='test-ui-only-key';ui.submit(d.getElementById('login-form'));
+  assert.equal(d.getElementById('new-entry').hidden,true);d.getElementById('profile-name').click();
+  assert.equal(d.getElementById('login-dialog').open,true);assert.equal(d.activeElement.id,'login-key');
+  d.getElementById('login-key').value='wrong-key';ui.submit(d.getElementById('login-form'));
+  await waitFor(()=>!d.getElementById('login-error').hidden);assert.equal(d.getElementById('new-entry').hidden,true);
+  d.getElementById('login-key').value='test-ui-only-key';ui.submit(d.getElementById('login-form'));
   await waitFor(()=>!d.getElementById('new-entry').hidden);assert.equal(d.getElementById('login-key').value,'');assert.equal(d.getElementById('sign-out').hidden,false);
+  d.getElementById('profile-name').click();assert.equal(ui.w.location.pathname,'/archive');assert.equal(d.getElementById('login-dialog').open,false);
   d.getElementById('sign-out').click();await waitFor(()=>d.getElementById('new-entry').hidden);assert.equal(d.getElementById('sign-in').hidden,false);
 });

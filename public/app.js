@@ -15,7 +15,15 @@
     if(!response.ok)throw new Error(value.error||'처리하지 못했어요. 다시 시도해 주세요.');
     return value;
   }
-  function ownerUI(){document.querySelectorAll('.owner-only').forEach(el=>el.hidden=!owner);$('edit-profile').hidden=!owner||!['about','interests','cv'].includes(page);$('sign-in').hidden=owner;$('sign-out').hidden=!owner||localMode;['edit-profile','new-entry','new-project','new-book','new-topic','new-cvitem'].forEach(id=>$(id).disabled=!state.profile);}
+  function ownerUI(){
+    document.querySelectorAll('.owner-only').forEach(el=>el.hidden=!owner);
+    $('edit-profile').hidden=!owner||!['about','interests','cv'].includes(page);
+    $('sign-in').hidden=owner;$('sign-out').hidden=!owner||localMode;
+    ['edit-profile','new-entry','new-project','new-book','new-topic','new-cvitem'].forEach(id=>$(id).disabled=!state.profile);
+    $('profile-name').setAttribute('aria-description',owner?'내 기록 관리':'관리자 로그인');
+    if(owner){$('profile-name').removeAttribute('aria-haspopup');$('profile-name').removeAttribute('aria-controls');}
+    else{$('profile-name').setAttribute('aria-haspopup','dialog');$('profile-name').setAttribute('aria-controls','login-dialog');}
+  }
   function openDialog(dialog){returnFocus=document.activeElement;dialog.showModal();document.body.classList.add('modal-open');}
   function closeDialog(dialog){dialog.close();if(!document.querySelector('dialog[open]'))document.body.classList.remove('modal-open');}
   function renderProfile(){
@@ -182,7 +190,13 @@
   document.querySelector('.cancel-editor').addEventListener('click',cancelEditor);
   document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('cancel',event=>{if(dialog.id==='editor'){event.preventDefault();cancelEditor();}});dialog.addEventListener('close',()=>{if(!document.querySelector('dialog[open]')){document.body.classList.remove('modal-open');returnFocus?.focus();}});});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
-  $('sign-in').addEventListener('click',()=>{$('login-error').hidden=true;openDialog($('login-dialog'));});
+  function openLogin(){
+    $('login-error').hidden=true;
+    openDialog($('login-dialog'));
+    $('login-key').focus();
+  }
+  $('sign-in').addEventListener('click',openLogin);
+  $('profile-name').addEventListener('click',()=>{if(owner)navigate('/archive');else openLogin();});
   $('login-form').addEventListener('submit',async event=>{
     event.preventDefault();const button=$('login-submit');button.disabled=true;$('login-error').hidden=true;
     try{await api('/api/login','POST',{key:$('login-key').value});owner=true;$('login-key').value='';closeDialog($('login-dialog'));await load();toast('편집 모드로 전환했어요.');}
