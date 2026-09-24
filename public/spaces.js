@@ -51,7 +51,7 @@
     const term=$('library-query').value.trim().toLocaleLowerCase(),all=libraryItems();
     const books=all.filter(b=>(typeFilter==='all'||b.type===typeFilter)&&(purposeFilter==='all'||b.purpose===purposeFilter)&&(!term||[b.title,b.creator,b.review,...b.tags].join(' ').toLocaleLowerCase().includes(term)));
     $('shelf-count').textContent=books.length+' READINGS';$('bookshelf').replaceChildren();
-    if(!books.length){const empty=node('div','empty-shelf');empty.append(node('span','','MY READING ROOM'),node('p','',all.length?'조건에 맞는 읽을거리가 없어요.':'읽은 논문, 글, 책이 꽂힐 자리예요.'));$('bookshelf').append(empty);return;}
+    if(!books.length){const empty=node('div',all.length?'empty-shelf':'empty-shelf template-copy');empty.append(node('span','','MY READING ROOM'),node('p','',all.length?'조건에 맞는 읽을거리가 없어요.':'읽은 논문, 글, 책이 꽂힐 자리예요.'));$('bookshelf').append(empty);return;}
     for(let start=0;start<books.length;start+=9){const shelf=node('div','shelf-row');
       books.slice(start,start+9).forEach((book,i)=>{const b=button('',()=>readBook(book),'book-spine');b.setAttribute('aria-label',book.title+' — '+types[book.type]+', 감상평 읽기');b.dataset.type=book.type;b.style.setProperty('--book-height',(205+(book.title.length*7%45))+'px');b.append(node('span','spine-type',types[book.type]),node('span','spine-title',book.title),node('span','spine-purpose',purposes[book.purpose]));shelf.append(b);});$('bookshelf').append(shelf);
     }
@@ -60,6 +60,7 @@
     if($('reader').open)UI.closeDialog($('reader'));
     $('detail-meta').textContent=types[book.type]+' / '+purposes[book.purpose];$('detail-title').textContent=book.title;$('detail-creator').textContent=book.creator;
     $('detail-review').textContent=book.review||'아직 남긴 감상평이 없어요.';
+    $('detail-review').classList.toggle('template-copy',!book.review);
     const url=safeLink(book.url);$('detail-link').hidden=!url;if(url)$('detail-link').href=url;else $('detail-link').removeAttribute('href');
     relatedEntries($('detail-related'),book.entryIds);$('detail-controls').replaceChildren();
     if(UI.owner){if(book.legacy)$('detail-controls').append(button('책장에 별도로 등록',()=>edit('library',{...book,id:undefined,revision:null})));else $('detail-controls').append(controls('library',book));}
@@ -87,7 +88,7 @@
       let cursor=top;for(const child of children(topic.id)){place(child,direction,level+1,cursor,{x,y});cursor+=leaves(child)*100;}}
     for(const [list,direction]of [[left,-1],[right,1]]){let cursor=(height-span(list))/2;for(const topic of list){place(topic,direction,1,cursor,{x:centerX,y:centerY});cursor+=leaves(topic)*100;}}
     const root=node('div','mindmap-root',UI.state.profile?.name||'Gyulim Kim');root.style.left=centerX+'px';root.style.top=centerY+'px';map.append(root);
-    if(!topics.length){const empty=node('p','map-empty','첫 관심사를 추가해서 지도를 펼쳐 보세요.');empty.style.left=centerX+'px';empty.style.top=(centerY+85)+'px';map.append(empty);}
+    if(!topics.length){const empty=node('p','map-empty template-copy','첫 관심사를 추가해서 지도를 펼쳐 보세요.');empty.style.left=centerX+'px';empty.style.top=(centerY+85)+'px';map.append(empty);}
     const scroller=map.parentElement;if(scroller.clientWidth&&!scroller.dataset.positioned){scroller.scrollLeft=(width-scroller.clientWidth)/2;scroller.dataset.positioned='true';}
     if(activeTopic&&topics.some(t=>t.id===activeTopic))showTopic(activeTopic);else {$('topic-detail').hidden=true;activeTopic=null;}
   }
@@ -95,7 +96,7 @@
     const topic=UI.state.topics.find(t=>t.id===id);if(!topic)return;activeTopic=id;
     document.querySelectorAll('.mindmap-node').forEach(b=>b.classList.toggle('selected',b.dataset.topicId===id));
     const detail=$('topic-detail');detail.hidden=false;detail.replaceChildren();const header=node('div','section-heading');header.append(node('h2','',topic.title),controls('topics',topic));detail.append(header,node('p','prose',topic.note||''));const related=node('div','related-block');relatedEntries(related,topic.entryIds);detail.append(related);
-    if(!topic.entryIds.length)detail.append(node('p','quiet-empty','아직 연결된 아카이브 글이 없어요.'));
+    if(!topic.entryIds.length)detail.append(node('p','quiet-empty template-copy','아직 연결된 아카이브 글이 없어요.'));
   }
   function renderResume(){
     $('resume-name').textContent=UI.state.profile?.name||'Gyulim Kim';$('resume-affiliation').textContent=UI.state.profile?.affiliation||'';
@@ -103,7 +104,7 @@
     for(const [key,label]of Object.entries(sections)){
       const items=(UI.state.cvitems||[]).filter(i=>i.section===key).sort((a,b)=>a.order-b.order||b.createdAt.localeCompare(a.createdAt));
       const section=node('section','resume-section'),content=node('div','resume-rows');section.append(node('h3','',label),content);
-      if(!items.length)content.append(node('p','resume-empty','아직 등록한 항목이 없어요.'));
+      if(!items.length)content.append(node('p','resume-empty template-copy','아직 등록한 항목이 없어요.'));
       for(const item of items){const row=node('article','resume-row'),copy=node('div');row.append(node('p','resume-period',item.period),copy);copy.append(node('h4','',item.title),node('p','resume-subtitle',item.subtitle));if(item.body)copy.append(node('p','prose',item.body));if(item.url)copy.append(external('관련 링크 ↗',item.url));if(UI.owner)copy.append(controls('cvitems',item));content.append(row);}
       container.append(section);
     }

@@ -33,6 +33,7 @@
     $('profile-affiliation').textContent=p.affiliation;
     $('about-affiliation').textContent=p.affiliation;
     $('profile-bio').textContent=p.bio;
+    $('profile-bio').classList.toggle('template-copy',p.bio==='배우고, 읽고, 만드는 과정에서\n만난 생각들을 모읍니다.');
     $('profile-interests').replaceChildren(...p.interests.map(tag=>node('span','',tag)));
     $('interests-body').textContent=p.interestsText||'';
     $('interests-empty').hidden=!!(p.interests.length||p.interestsText);
@@ -85,9 +86,9 @@
     $('entries').replaceChildren();
     if(!entries.length){
       const empty=node('div','empty-state');
-      empty.append(node('span','empty-index','01'),node('h3','',term?'검색 결과가 없어요.':filter==='all'?'아직 비어 있는 첫 페이지.':labels[filter]+'의 첫 페이지.'));
+      empty.append(node('span','empty-index template-copy','01'),node('h3',term?'':'template-copy',term?'검색 결과가 없어요.':filter==='all'?'아직 비어 있는 첫 페이지.':labels[filter]+'의 첫 페이지.'));
       const descriptions={study:'배운 것과 이해한 것을 나의 언어로 남겨요.',reading:'읽은 것과 그 안에서 발견한 질문들을 모아요.',publication:'함께한 연구와 참여한 논문을 소개해요.',thoughts:'오래 붙잡아 두고 싶은 생각들을 남겨요.',daily:'지나가는 하루의 장면들을 남겨요.',all:'공부한 것, 읽은 것, 일상에서 만난 생각.\n차곡차곡 쌓여갈 기록을 위한 자리예요.'};
-      const p=node('p','',term?'다른 검색어로 찾아보세요.':descriptions[filter]);p.style.whiteSpace='pre-line';empty.append(p);
+      const p=node('p',term?'':'template-copy',term?'다른 검색어로 찾아보세요.':descriptions[filter]);p.style.whiteSpace='pre-line';empty.append(p);
       if(owner){const button=node('button','subtle-button','첫 기록 남기기 ↗');button.type='button';button.addEventListener('click',()=>openEditor('entries'));empty.append(button);}
       $('entries').append(empty);
     }
@@ -96,7 +97,7 @@
   }
   function renderProjects(){
     $('project-list').replaceChildren();
-    if(!state.projects.length){const empty=node('div','project-empty');const text=node('div');text.append(node('h3','','내가 만든 것들의 자리.'),node('p','','웹사이트와 작은 프로젝트를 이곳에 모아요.'));empty.append(text,node('span','','↗'));$('project-list').append(empty);}
+    if(!state.projects.length){const empty=node('div','project-empty template-copy');const text=node('div');text.append(node('h3','','내가 만든 것들의 자리.'),node('p','','웹사이트와 작은 프로젝트를 이곳에 모아요.'));empty.append(text,node('span','','↗'));$('project-list').append(empty);}
     state.projects.forEach(project=>{
       const card=node('article','project-card');card.append(node('span','project-label',project.label),node('h3','',project.title));if(project.description)card.append(node('p','',project.description));
       const link=node('a','project-link');link.href=safeLink(project.url)||'#';link.target='_blank';link.rel='noopener noreferrer';link.append(node('span','','사이트 열기'),node('span','','↗'));card.append(link);

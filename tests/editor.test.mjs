@@ -114,7 +114,7 @@ test('rabbit count is visible only while held; orbit rotation does not navigate 
   assert.equal(counter.hidden,true);rabbit.dispatchEvent(new w.KeyboardEvent('keydown',{key:' ',bubbles:true}));assert.equal(counter.hidden,false);assert.match(counter.textContent,/1번/);assert.equal(d.querySelectorAll('.petal').length,1);
   await waitFor(()=>d.querySelectorAll('.petal').length>=3);
   assert.match(counter.textContent,/1번/);assert.equal(rabbit.classList.contains('petted'),false);
-  assert([...d.querySelectorAll('.petal')].every(p=>p.querySelector('svg path')&&parseFloat(p.style.getPropertyValue('--dy'))<0&&parseFloat(p.style.getPropertyValue('--dx'))>0&&parseFloat(p.style.getPropertyValue('--size'))<=12));
+  assert([...d.querySelectorAll('.petal')].every(p=>p.querySelector('svg path')&&parseFloat(p.style.getPropertyValue('--dy'))<0&&parseFloat(p.style.getPropertyValue('--dx'))>0&&parseFloat(p.style.getPropertyValue('--size'))<=18));
   rabbit.dispatchEvent(new w.KeyboardEvent('keyup',{key:' ',bubbles:true}));assert.equal(counter.hidden,true);assert.equal(w.localStorage.getItem('gyulim-rabbit-pets'),'1');
   const releasedCount=d.querySelectorAll('.petal').length;
   await new Promise(resolve=>setTimeout(resolve,350));

@@ -88,3 +88,11 @@ body:has(#home:not([hidden]))>footer{display:none}
 @media(max-width:800px){.home{position:relative}.lace-top{display:none}.lace-bottom{width:140px;filter:url(#ink-only)}}
 
 .about-label{display:flex;align-items:center;justify-content:flex-end;gap:.22em;font-weight:400;line-height:1.15;text-decoration:none}.about-arrow{display:block;width:1em;height:1.05em;flex:none}.orbit-label{font-weight:400}.recent-toolbar{font-weight:400}.recent-label option{font-family:var(--label)}
+
+/* On mobile, show the owner's content without the default editorial filler. */
+@media(max-width:800px){
+  .template-copy{display:none!important}
+  .section-heading:has(>.template-copy):not(:has(>button:not([hidden]))),.resume-section:has(.resume-empty){display:none}
+  .empty-state:has(>.template-copy){padding:0}
+  .page-heading h1{margin-top:0}
+}

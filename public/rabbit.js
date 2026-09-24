@@ -8,24 +8,24 @@
     try{localStorage.setItem('gyulim-rabbit-pets',String(count));}catch{}
   }
   function releasePetal(){
-    if(petals.children.length>=16)return;
+    if(petals.children.length>=32)return;
     const petal=document.createElement('span');petal.className='petal';
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'),outline=document.createElementNS(svg.namespaceURI,'path');
     svg.setAttribute('viewBox','0 0 28 38');svg.setAttribute('aria-hidden','true');svg.setAttribute('focusable','false');
     outline.setAttribute('d',Math.random()<.5?'M13 34C8 28 3 22 3 14C3 7 7 3 11 4C13 4 14 6 15 7C16 4 19 3 22 6C29 14 22 27 13 34Z':'M13 34C5 28 1 19 4 11C6 4 11 2 15 4C20 1 25 7 24 14C25 23 18 31 13 34Z');
     svg.append(outline);petal.append(svg);
-    const scale=Math.max(45,rabbit.getBoundingClientRect().width),duration=3000+Math.random()*500;
-    petal.style.setProperty('--dx',(scale*(.65+Math.random()*.55))+'px');
-    petal.style.setProperty('--dy',(-scale*(1.9+Math.random()*.7))+'px');
-    petal.style.setProperty('--size',(Math.min(10,Math.max(5,scale*.085))+Math.random()*2)+'px');
-    petal.style.setProperty('--spin',(30+Math.random()*80)+'deg');
+    const scale=Math.max(45,rabbit.getBoundingClientRect().width),duration=3200+Math.random()*700;
+    petal.style.setProperty('--dx',(scale*(.45+Math.random()*1.15))+'px');
+    petal.style.setProperty('--dy',(-scale*(1.8+Math.random()*.9))+'px');
+    petal.style.setProperty('--size',(Math.min(10,Math.max(5,scale*.085))*(1+Math.random()*.8))+'px');
+    petal.style.setProperty('--spin',(-45+Math.random()*200)+'deg');
     petal.style.setProperty('--duration',duration+'ms');
     petals.append(petal);setTimeout(()=>petal.remove(),duration+100);
   }
   function emit(){
     if(!held)return;
     releasePetal();
-    emissionTimer=setTimeout(emit,210+Math.random()*90);
+    emissionTimer=setTimeout(emit,110+Math.random()*60);
   }
   function start(){if(held)return;held=true;counter.hidden=false;pet();lastPet=performance.now();emit();}
   function stop(){held=false;clearTimeout(emissionTimer);emissionTimer=null;pointer=null;last=null;distance=0;counter.hidden=true;}
