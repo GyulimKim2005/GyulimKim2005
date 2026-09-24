@@ -36,6 +36,16 @@
     document.title=(page?pages[page][0]+' — ':'')+p.name;
   }
   const sortedEntries=()=>[...state.entries].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt)||a.id.localeCompare(b.id));
+  const sortNames={recent:'최신순',oldest:'오래된순',title:'제목순'};
+  let previewSort='recent';
+  try{const saved=localStorage.getItem('gyulim-home-sort');if(Object.hasOwn(sortNames,saved))previewSort=saved;}catch{}
+  $('recent-sort').value=previewSort;
+  $('recent-sort').addEventListener('change',()=>{
+    previewSort=Object.hasOwn(sortNames,$('recent-sort').value)?$('recent-sort').value:'recent';
+    try{localStorage.setItem('gyulim-home-sort',previewSort);}catch{}
+    if(state.profile)renderRecent();
+    $('recent-posts').scrollTop=0;
+  });
   function entryButton(entry,cls='entry-row'){
     const button=node('button',cls);button.type='button';button.setAttribute('aria-label',entry.title+' 읽기');
     const content=node('div'),meta=node('div','entry-meta'),time=node('time','',entry.date.replaceAll('-','.'));time.dateTime=entry.date;
@@ -51,7 +61,11 @@
     return placeholder;
   }
   function renderRecent(){
-    const latest=sortedEntries().slice(0,5);$('recent-posts').replaceChildren(...latest.map(e=>entryButton(e,'recent-card')));
+    const ordered=sortedEntries();
+    if(previewSort==='oldest')ordered.reverse();
+    if(previewSort==='title')ordered.sort((a,b)=>a.title.localeCompare(b.title,'ko',{numeric:true,sensitivity:'base'}));
+    const latest=ordered.slice(0,5);$('recent-posts').replaceChildren(...latest.map(e=>entryButton(e,'recent-card')));
+    $('recent-posts').setAttribute('aria-label',sortNames[previewSort]+' 게시글 최대 5개, 영역 안에서 스크롤');
     for(let i=latest.length;i<5;i++)$('recent-posts').append(recentPlaceholder(i===0?'아직 등록한 기록이 없어요.':''));
     $('publication-list').replaceChildren(...sortedEntries().filter(e=>e.category==='publication').map(e=>entryButton(e)));
     $('publication-list').hidden=!state.entries.some(e=>e.category==='publication');

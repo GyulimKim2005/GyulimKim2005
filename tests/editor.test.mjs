@@ -52,6 +52,20 @@ test('home shows only the latest five and search includes older archive records'
   assert.equal(ui.w.location.pathname,'/archive');assert.equal(d.getElementById('home').hidden,true);assert.equal(d.querySelectorAll('#entries .entry-row').length,1);assert.match(d.getElementById('entries').textContent,/기록 0/);
 });
 
+test('home sort changes the selected five records and preserves archive order',async t=>{
+  const titles=['Zulu','Delta','Hotel','Alpha','Golf','Bravo','Foxtrot','Echo'];
+  const ui=await editor(t,{DEV_LOCAL:true},{seed:data=>{data.entries=titles.map((title,i)=>({id:'sort-'+i,revision:'r'+i,title,body:'본문',summary:'',date:'2026-09-'+String(i+1).padStart(2,'0'),category:'study',tags:[],sourceUrl:'',createdAt:'2026-09-01T00:00:00Z'}));}}),d=ui.document;
+  const visible=()=>[...d.querySelectorAll('#recent-posts h3')].map(e=>e.textContent),select=d.getElementById('recent-sort');
+  assert.deepEqual(visible(),['Echo','Foxtrot','Bravo','Golf','Alpha']);
+  select.value='oldest';select.dispatchEvent(new ui.w.Event('change'));
+  assert.deepEqual(visible(),['Zulu','Delta','Hotel','Alpha','Golf']);
+  select.value='title';select.dispatchEvent(new ui.w.Event('change'));
+  assert.deepEqual(visible(),['Alpha','Bravo','Delta','Echo','Foxtrot']);
+  assert.equal(ui.w.localStorage.getItem('gyulim-home-sort'),'title');
+  assert.match(d.getElementById('recent-posts').getAttribute('aria-label'),/제목순/);
+  assert.deepEqual([...d.querySelectorAll('#entries h3')].map(e=>e.textContent),[...titles].reverse());
+});
+
 test('recent frames survive loading, failed requests and recovery',async t=>{
   const dom=new JSDOM(await readFile('public/index.html','utf8'),{url:'https://archive.test',runScripts:'outside-only'}),w=dom.window,d=w.document;
   t.after(()=>w.close());w.scrollTo=()=>{};
@@ -61,6 +75,8 @@ test('recent frames survive loading, failed requests and recovery',async t=>{
   w.eval(await readFile('public/app.js','utf8'));
   await waitFor(()=>d.querySelector('.recent-error'));
   assert.equal(d.querySelectorAll('#recent-posts .recent-card').length,5);
+  d.getElementById('recent-sort').value='oldest';d.getElementById('recent-sort').dispatchEvent(new w.Event('change'));
+  assert(d.querySelector('.recent-error'));
   recover=true;d.querySelector('.recent-error button').click();
   await waitFor(()=>!d.querySelector('.recent-error'));
   assert.equal(d.querySelectorAll('#recent-posts .recent-card').length,5);
@@ -96,6 +112,8 @@ test('shelf, mind map, CV and archive links can be edited from the page',async t
 test('rabbit count is visible only while held; orbit rotation does not navigate on drag',async t=>{
   const ui=await editor(t),w=ui.w,d=ui.document,rabbit=d.getElementById('pet-rabbit'),counter=d.getElementById('pet-count');
   assert.equal(counter.hidden,true);rabbit.dispatchEvent(new w.KeyboardEvent('keydown',{key:' ',bubbles:true}));assert.equal(counter.hidden,false);assert.match(counter.textContent,/1번/);assert.equal(d.querySelectorAll('.petal').length,6);
+  assert.equal(d.querySelectorAll('.petal svg path').length,6);assert.equal(rabbit.classList.contains('petted'),false);
+  assert([...d.querySelectorAll('.petal')].every(p=>parseFloat(p.style.getPropertyValue('--dy'))<=-180));
   rabbit.dispatchEvent(new w.KeyboardEvent('keyup',{key:' ',bubbles:true}));assert.equal(counter.hidden,true);assert.equal(w.localStorage.getItem('gyulim-rabbit-pets'),'1');
   rabbit.dispatchEvent(new w.MouseEvent('pointerdown',{button:0,clientX:10,clientY:10,bubbles:true}));assert.equal(counter.hidden,false);w.dispatchEvent(new w.Event('blur'));assert.equal(counter.hidden,true);
   const orbit=d.getElementById('orbit'),link=orbit.querySelector('a');orbit.getBoundingClientRect=()=>({left:0,top:0,width:1000,height:560});
@@ -107,6 +125,29 @@ test('rabbit count is visible only while held; orbit rotation does not navigate 
   orbit.dispatchEvent(new w.WheelEvent('wheel',{deltaY:80,bubbles:true,cancelable:true}));assert.equal(ring.getAttribute('d'),fixedRing);
   orbit.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Home',bubbles:true}));assert.equal(link.style.cssText,initialPosition);assert.equal(ring.getAttribute('d'),fixedRing);
   link.click();assert.equal(w.location.pathname,'/interests');
+});
+
+test('orbit menus keep equal arc distances, stay on the visible ring and move their labels with position',async t=>{
+  const ui=await editor(t),d=ui.document,w=ui.w,orbit=d.getElementById('orbit'),ring=d.getElementById('orbit-path'),fixed=ring.getAttribute('d');
+  const points=[...fixed.matchAll(/[ML]([\d.-]+) ([\d.-]+)/g)].map(m=>({x:Number(m[1]),y:Number(m[2])}));
+  let length=0;points.forEach((p,i)=>{if(i)length+=Math.hypot(p.x-points[i-1].x,p.y-points[i-1].y);p.distance=length;});
+  function verify(){
+    const distances=[...orbit.querySelectorAll('.orbit-item')].map(item=>{
+      const x=parseFloat(item.style.left)*1016/100,y=parseFloat(item.style.top)*533/100;let error=Infinity,distance;
+      for(let i=1;i<points.length;i++){
+        const a=points[i-1],b=points[i],dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy))),e=Math.hypot(x-a.x-dx*t,y-a.y-dy*t);
+        if(e<error){error=e;distance=a.distance+(b.distance-a.distance)*t;}
+      }
+      assert(error<.01,'menu centre must remain on the drawn line');return distance;
+    }).sort((a,b)=>a-b);
+    distances.forEach((value,i)=>{const gap=i===4?length+distances[0]-value:distances[i+1]-value;assert(Math.abs(gap-length/5)<.01,'spacing must not change with curvature or wrapping');});
+    assert.equal(ring.getAttribute('d'),fixed);
+  }
+  verify();assert(d.querySelector('[data-orbit-index="1"]').classList.contains('label-upper-left'));
+  d.getElementById('orbit-next').click();verify();
+  assert(d.querySelector('[data-orbit-index="0"]').classList.contains('label-upper-left'));
+  assert(!d.querySelector('[data-orbit-index="1"]').classList.contains('label-upper-left'));
+  for(let i=0;i<30;i++){orbit.dispatchEvent(new w.WheelEvent('wheel',{deltaY:i%2?100:260,bubbles:true,cancelable:true}));verify();}
 });
 test('login and logout change editing controls without exposing credentials',async t=>{
   const ui=await editor(t,{ADMIN_KEY_HASH:digest('test-ui-only-key'),SESSION_SECRET:'test-only-session-secret-with-more-than-32-characters'}),d=ui.document;
