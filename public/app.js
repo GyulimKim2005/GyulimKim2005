@@ -68,12 +68,51 @@
     if(message)placeholder.append(node('p','sr-only',message));else placeholder.setAttribute('aria-hidden','true');
     return placeholder;
   }
+  const updateKinds={
+    entries:{route:'archive',label:item=>'ARCHIVE · '+labels[item.category],summary:item=>item.summary},
+    projects:{route:'dev',label:()=> 'DEV',summary:item=>item.description},
+    library:{route:'library',label:item=>'LIBRARY · '+item.type.toUpperCase(),summary:item=>item.review||item.creator},
+    topics:{route:'interests',label:()=> 'INTERESTS',summary:item=>item.note},
+    cvitems:{route:'cv',label:()=> 'CV',summary:item=>item.subtitle||item.period}
+  };
+  function allUpdates(){
+    const updates=Object.entries(updateKinds).flatMap(([kind,config])=>(state[kind]||[]).map(item=>({
+      kind,id:item.id,route:config.route,title:item.title,label:config.label(item),summary:config.summary(item),
+      timestamp:item.updatedAt||item.createdAt||item.date||'',item
+    })));
+    for(const [route,timestamp] of Object.entries(state.profile?.sectionUpdatedAt||{})){
+      if(!['about','interests','cv'].includes(route))continue;
+      updates.push({kind:'profile',id:route,route,timestamp,label:pages[route][0].toUpperCase(),title:({about:'프로필 업데이트',interests:'관심사 업데이트',cv:'CV 업데이트'})[route],summary:''});
+    }
+    return updates.sort((a,b)=>(Date.parse(b.timestamp)||0)-(Date.parse(a.timestamp)||0)||a.kind.localeCompare(b.kind)||a.id.localeCompare(b.id));
+  }
+  function focusUpdate(selector){
+    const target=document.querySelector(selector);if(!target)return;
+    target.tabIndex=-1;target.scrollIntoView?.({block:'center'});target.focus({preventScroll:true});
+  }
+  function openUpdate(update){
+    if(update.kind==='entries'){readEntry(update.id);return;}
+    navigate('/'+update.route);
+    if(update.kind==='projects')focusUpdate('[data-project-id="'+update.id+'"]');
+    if(update.kind==='library')window.Spaces?.readBook(update.item);
+    if(update.kind==='topics'){window.Spaces?.showTopic(update.id);focusUpdate('#topic-detail');}
+    if(update.kind==='cvitems')focusUpdate('[data-cv-id="'+update.id+'"]');
+  }
+  function updateButton(update){
+    const button=node('button','recent-card');button.type='button';button.dataset.updateKind=update.kind;button.dataset.updateId=update.id;
+    button.setAttribute('aria-label',update.title+' 열기');
+    const meta=node('div','entry-meta'),date=new Date(update.timestamp);
+    meta.append(node('span','entry-category',update.label));
+    if(!Number.isNaN(date.getTime())){const time=node('time','',new Intl.DateTimeFormat('sv-SE').format(date).replaceAll('-','.'));time.dateTime=update.timestamp;meta.append(time);}
+    button.append(meta,node('h3','',update.title));if(update.summary)button.append(node('p','',update.summary));
+    button.addEventListener('click',()=>openUpdate(update));return button;
+  }
   function renderRecent(){
-    const ordered=sortedEntries();
+    const ordered=allUpdates();
     if(previewSort==='oldest')ordered.reverse();
     if(previewSort==='title')ordered.sort((a,b)=>a.title.localeCompare(b.title,'ko',{numeric:true,sensitivity:'base'}));
-    const latest=ordered.slice(0,5);$('recent-posts').replaceChildren(...latest.map(e=>entryButton(e,'recent-card')));
-    $('recent-posts').setAttribute('aria-label',sortNames[previewSort]+' 게시글 최대 5개, 영역 안에서 스크롤');
+    const latest=ordered.slice(0,5);$('recent-posts').replaceChildren(...latest.map(updateButton));
+    $('recent-posts').setAttribute('aria-label',sortNames[previewSort]+' 전체 업데이트 최대 5개, 영역 안에서 스크롤');
     for(let i=latest.length;i<5;i++)$('recent-posts').append(recentPlaceholder(i===0?'아직 등록한 기록이 없어요.':''));
     $('publication-list').replaceChildren(...sortedEntries().filter(e=>e.category==='publication').map(e=>entryButton(e)));
     $('publication-list').hidden=!state.entries.some(e=>e.category==='publication');
@@ -99,7 +138,7 @@
     $('project-list').replaceChildren();
     if(!state.projects.length){const empty=node('div','project-empty template-copy');const text=node('div');text.append(node('h3','','내가 만든 것들의 자리.'),node('p','','웹사이트와 작은 프로젝트를 이곳에 모아요.'));empty.append(text,node('span','','↗'));$('project-list').append(empty);}
     state.projects.forEach(project=>{
-      const card=node('article','project-card');card.append(node('span','project-label',project.label),node('h3','',project.title));if(project.description)card.append(node('p','',project.description));
+      const card=node('article','project-card');card.dataset.projectId=project.id;card.append(node('span','project-label',project.label),node('h3','',project.title));if(project.description)card.append(node('p','',project.description));
       const link=node('a','project-link');link.href=safeLink(project.url)||'#';link.target='_blank';link.rel='noopener noreferrer';link.append(node('span','','사이트 열기'),node('span','','↗'));card.append(link);
       if(owner){const controls=node('div','project-controls');const edit=node('button','subtle-button','수정');edit.type='button';edit.setAttribute('aria-label',project.title+' 수정');edit.addEventListener('click',()=>openEditor('projects',project));const remove=node('button','subtle-button danger','삭제');remove.type='button';remove.setAttribute('aria-label',project.title+' 삭제');remove.addEventListener('click',()=>confirmDelete('projects',project));controls.append(edit,remove);card.append(controls);}
       $('project-list').append(card);

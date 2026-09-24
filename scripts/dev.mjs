@@ -18,7 +18,7 @@ const server=http.createServer(async(req,res)=>{
     const pathname=new URL(req.url,'http://localhost').pathname;
     const routes=['/','/about','/interests','/dev','/archive','/library','/cv'];
     const file=routes.includes(pathname.replace(/\/$/,'')||'/')?'index.html':pathname.slice(1);
-    if(!['index.html','app.js','orbit.js','rabbit.js','spaces.js','styles.css','assets/miricanvas-home.png','assets/paper-background.png','assets/lace-reference.png','assets/fonts/hanyongun.woff2'].includes(file)){res.writeHead(404);res.end('Not found');return;}
+    if(!['index.html','app.js','orbit.js','rabbit.js','spaces.js','styles.css','assets/miricanvas-home.png','assets/paper-background.png','assets/lace-reference.png','assets/lace-favicon.png','assets/fonts/hanyongun.woff2'].includes(file)){res.writeHead(404);res.end('Not found');return;}
     res.writeHead(200,{'Content-Type':types[path.extname(file)],'Cache-Control':'no-store'});res.end(await readFile(path.join('public',file)));
   }catch(error){console.error(error.name);res.writeHead(500);res.end('Local server error');}
 });

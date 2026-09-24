@@ -57,7 +57,12 @@ export async function handleApi(request,{env={},store,fetchImpl=fetch}){
     const input=await inputOf(request),snapshot=await store.read(),data=normalizeContent(snapshot.data);
     if(path==='/api/profile'){
       if(data.profile.revision!==(input.revision??null))throw new ConflictError();
-      data.profile={...validate('profile',input),revision:randomUUID()};await store.write(data,snapshot.version);return json(data.profile);
+      const value=validate('profile',input),now=new Date().toISOString(),sectionUpdatedAt={...data.profile.sectionUpdatedAt};
+      const sectionFields={about:['name','affiliation','bio','photoUrl'],interests:['interests','interestsText'],cv:['cv','cvUrl']};
+      for(const [section,fields] of Object.entries(sectionFields)){
+        if(fields.some(field=>JSON.stringify(value[field])!==JSON.stringify(data.profile[field]??(field==='interests'?[]:''))))sectionUpdatedAt[section]=now;
+      }
+      data.profile={...value,sectionUpdatedAt,revision:randomUUID()};await store.write(data,snapshot.version);return json(data.profile);
     }
     const [,kind,id]=match,index=data[kind].findIndex(item=>item.id===id),old=data[kind][index];
     if(old&&old.revision!==input.revision)throw new ConflictError();
@@ -68,7 +73,8 @@ export async function handleApi(request,{env={},store,fetchImpl=fetch}){
       if(kind==='topics')for(const item of data.topics)if(item.parentId===id){item.parentId=old.parentId;item.revision=randomUUID();}
       await store.write(data,snapshot.version);return json({ok:true});
     }
-    const value={...validate(kind,input),id,createdAt:old?.createdAt||new Date().toISOString(),revision:randomUUID()};
+    const now=new Date().toISOString();
+    const value={...validate(kind,input),id,createdAt:old?.createdAt||now,updatedAt:now,revision:randomUUID()};
     if(value.entryIds?.some(ref=>!data.entries.some(entry=>entry.id===ref)))throw new InputError('연결하려는 기록이 삭제되었어요. 새로고침해 주세요.',409);
     if(kind==='topics'){
       if(value.parentId&&!data.topics.some(topic=>topic.id===value.parentId))throw new InputError('상위 관심사를 찾을 수 없어요.',409);

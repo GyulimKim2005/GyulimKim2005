@@ -62,24 +62,31 @@
   orbit.addEventListener('pointerdown',event=>{
     if(event.button!==0||event.target.closest('.orbit-controls,.rabbit')||event.isPrimary===false)return;
     cancelAnimationFrame(frame);frame=0;targetRotation=rotation;
-    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,last:pointerPosition(event),distance:pointerDistance(event),dragged:false,pointerType:event.pointerType,onMenu:!!event.target.closest('.orbit-item')};
+    gesture={id:event.pointerId,x:event.clientX,y:event.clientY,last:pointerPosition(event),distance:pointerDistance(event),dragged:false,pointerType:event.pointerType,onMenu:!!event.target.closest('.orbit-item'),mobile:window.innerWidth<=800};
     suppressUntil=0;
   });
   orbit.addEventListener('pointermove',event=>{
     if(!gesture||gesture.id!==event.pointerId)return;
     if(!gesture.dragged){
       const dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
-      if(Math.hypot(dx,dy)<8)return;
-      // Let vertical touch gestures scroll the mobile page.
-      if(gesture.pointerType==='touch'&&!gesture.onMenu&&Math.abs(dy)>Math.abs(dx)){gesture=null;return;}
+      if(Math.hypot(dx,dy)<(gesture.mobile?4:8))return;
+      // Preserve the existing larger-screen touch behavior.
+      if(!gesture.mobile&&gesture.pointerType==='touch'&&!gesture.onMenu&&Math.abs(dy)>Math.abs(dx)){gesture=null;return;}
+      if(gesture.mobile){
+        // Lock the swipe axis once: fingers need not trace the small curved ring.
+        gesture.axis=Math.abs(dx)>=Math.abs(dy)?'x':'y';
+        const tangent=atDistance(gesture.distance),component=gesture.axis==='x'?tangent.tx:tangent.ty;
+        gesture.direction=component<0?-1:1;
+      }
       gesture.dragged=true;orbit.classList.add('dragging');orbit.setPointerCapture?.(event.pointerId);
     }
     event.preventDefault();
     const current=pointerPosition(event),tangent=atDistance(gesture.distance);
     // Project each small movement onto the held point's tangent. A nearest-point
     // search on every event jumps between the two ends when crossing the gap.
-    const delta=((current.x-gesture.last.x)*tangent.tx+(current.y-gesture.last.y)*tangent.ty)*.8;
-    gesture.distance+=delta;gesture.last=current;turn(delta);
+    const delta=gesture.mobile?(current[gesture.axis]-gesture.last[gesture.axis])*gesture.direction*.95:((current.x-gesture.last.x)*tangent.tx+(current.y-gesture.last.y)*tangent.ty)*.8;
+    gesture.distance+=delta;gesture.last=current;
+    if(gesture.mobile){targetRotation+=delta;rotation=targetRotation;render();}else turn(delta);
   });
   function finish(event){
     if(!gesture||gesture.id!==event.pointerId)return;

@@ -105,7 +105,7 @@
       const items=(UI.state.cvitems||[]).filter(i=>i.section===key).sort((a,b)=>a.order-b.order||b.createdAt.localeCompare(a.createdAt));
       const section=node('section','resume-section'),content=node('div','resume-rows');section.append(node('h3','',label),content);
       if(!items.length)content.append(node('p','resume-empty template-copy','아직 등록한 항목이 없어요.'));
-      for(const item of items){const row=node('article','resume-row'),copy=node('div');row.append(node('p','resume-period',item.period),copy);copy.append(node('h4','',item.title),node('p','resume-subtitle',item.subtitle));if(item.body)copy.append(node('p','prose',item.body));if(item.url)copy.append(external('관련 링크 ↗',item.url));if(UI.owner)copy.append(controls('cvitems',item));content.append(row);}
+      for(const item of items){const row=node('article','resume-row'),copy=node('div');row.dataset.cvId=item.id;row.append(node('p','resume-period',item.period),copy);copy.append(node('h4','',item.title),node('p','resume-subtitle',item.subtitle));if(item.body)copy.append(node('p','prose',item.body));if(item.url)copy.append(external('관련 링크 ↗',item.url));if(UI.owner)copy.append(controls('cvitems',item));content.append(row);}
       container.append(section);
     }
     $('cv-empty').hidden=true;
@@ -124,6 +124,6 @@
       for(const item of result.results){const card=node('article','discovery-card');card.append(node('span','eyebrow',types[item.type]),node('h3','',item.title),node('p','detail-creator',item.creator),node('p','',item.reason),external('출처 · '+item.sourceTitle+' ↗',item.url));const add=button('서재에 담기 ＋',()=>edit('library',{title:item.title,creator:item.creator,type:item.type,purpose,url:item.url,review:'',tags:[],entryIds:[]}));card.append(add);$('discover-results').append(card);}
     }catch(error){$('discover-status').textContent=error.message;}finally{searching=false;$('discover-submit').disabled=false;}
   });
-  window.Spaces={render,editorFields,readRelated};
+  window.Spaces={render,editorFields,readRelated,readBook,showTopic};
   if(UI.state.profile)render();
 })();

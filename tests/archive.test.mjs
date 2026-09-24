@@ -95,3 +95,19 @@ test('AI search is owner-only, disabled by default, source-checked and daily lim
   const capped=await handleApi(request('/api/discover','POST',search,{owner:true}),{env:active,store,fetchImpl});assert.equal(capped.status,429);assert.equal(calls,1);
   const content=await (await handleApi(request('/api/content'),{env:active,store})).json();assert.equal(content.aiUsage,undefined);
 });
+
+
+test('update timestamps are server-owned and profile edits track only changed spaces',async t=>{
+  const {store}=await setup(t),context={env,store};
+  const first=await (await handleApi(request('/api/projects/update-test','PUT',{title:'Site',description:'',url:'https://example.org',label:'WEBSITE',updatedAt:'2099-01-01T00:00:00Z'},{owner:true}),context)).json();
+  assert.equal(first.updatedAt,first.createdAt);assert(!first.updatedAt.startsWith('2099'));
+  const edited=await (await handleApi(request('/api/projects/update-test','PUT',{...first,title:'Updated site',createdAt:'1900-01-01',updatedAt:'2099-01-01'},{owner:true}),context)).json();
+  assert.equal(edited.createdAt,first.createdAt);assert(edited.updatedAt>=first.updatedAt);assert(!edited.updatedAt.startsWith('2099'));
+  const profile={...initialContent().profile,interestsText:'New topic',cv:'',photoUrl:'',cvUrl:''};
+  const changed=await (await handleApi(request('/api/profile','PUT',profile,{owner:true}),context)).json();
+  assert.deepEqual(Object.keys(changed.sectionUpdatedAt),['interests']);
+  const unchanged=await (await handleApi(request('/api/profile','PUT',{...changed,sectionUpdatedAt:{about:'2099-01-01'}},{owner:true}),context)).json();
+  assert.deepEqual(unchanged.sectionUpdatedAt,changed.sectionUpdatedAt);
+  const cv=await (await handleApi(request('/api/profile','PUT',{...unchanged,cv:'New resume'},{owner:true}),context)).json();
+  assert(cv.sectionUpdatedAt.cv);assert.equal(cv.sectionUpdatedAt.interests,changed.sectionUpdatedAt.interests);assert.equal(cv.sectionUpdatedAt.about,undefined);
+});

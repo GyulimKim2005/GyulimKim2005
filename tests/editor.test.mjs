@@ -46,7 +46,7 @@ test('editor creates and filters records, preserves failed input, and manages li
 });
 
 test('home shows only the latest five and search includes older archive records',async t=>{
-  const ui=await editor(t,{DEV_LOCAL:true},{seed:data=>{data.entries=Array.from({length:8},(_,i)=>({id:'record-'+i,revision:'r'+i,title:'기록 '+i,body:i===0?'아주 오래된 특별한 검색어':'본문',summary:'',date:'2026-09-'+String(i+1).padStart(2,'0'),category:'study',tags:[],sourceUrl:'',createdAt:'2026-09-01T00:00:00Z'}));}}),d=ui.document;
+  const ui=await editor(t,{DEV_LOCAL:true},{seed:data=>{data.entries=Array.from({length:8},(_,i)=>({id:'record-'+i,revision:'r'+i,title:'기록 '+i,body:i===0?'아주 오래된 특별한 검색어':'본문',summary:'',date:'2026-09-'+String(i+1).padStart(2,'0'),category:'study',tags:[],sourceUrl:'',createdAt:'2026-09-'+String(i+1).padStart(2,'0')+'T00:00:00Z'}));}}),d=ui.document;
   assert.deepEqual([...d.querySelectorAll('#recent-posts h3')].map(e=>e.textContent),['기록 7','기록 6','기록 5','기록 4','기록 3']);
   d.getElementById('search-input').value='특별한 검색어';ui.submit(d.getElementById('search-form'));
   assert.equal(ui.w.location.pathname,'/archive');assert.equal(d.getElementById('home').hidden,true);assert.equal(d.querySelectorAll('#entries .entry-row').length,1);assert.match(d.getElementById('entries').textContent,/기록 0/);
@@ -54,7 +54,7 @@ test('home shows only the latest five and search includes older archive records'
 
 test('home sort changes the selected five records and preserves archive order',async t=>{
   const titles=['Zulu','Delta','Hotel','Alpha','Golf','Bravo','Foxtrot','Echo'];
-  const ui=await editor(t,{DEV_LOCAL:true},{seed:data=>{data.entries=titles.map((title,i)=>({id:'sort-'+i,revision:'r'+i,title,body:'본문',summary:'',date:'2026-09-'+String(i+1).padStart(2,'0'),category:'study',tags:[],sourceUrl:'',createdAt:'2026-09-01T00:00:00Z'}));}}),d=ui.document;
+  const ui=await editor(t,{DEV_LOCAL:true},{seed:data=>{data.entries=titles.map((title,i)=>({id:'sort-'+i,revision:'r'+i,title,body:'본문',summary:'',date:'2026-09-'+String(i+1).padStart(2,'0'),category:'study',tags:[],sourceUrl:'',createdAt:'2026-09-'+String(i+1).padStart(2,'0')+'T00:00:00Z'}));}}),d=ui.document;
   const visible=()=>[...d.querySelectorAll('#recent-posts h3')].map(e=>e.textContent),select=d.getElementById('recent-sort');
   assert.deepEqual(visible(),['Echo','Foxtrot','Bravo','Golf','Alpha']);
   select.value='oldest';select.dispatchEvent(new ui.w.Event('change'));
@@ -198,4 +198,49 @@ test('login and logout change editing controls without exposing credentials',asy
   await waitFor(()=>!d.getElementById('new-entry').hidden);assert.equal(d.getElementById('login-key').value,'');assert.equal(d.getElementById('sign-out').hidden,false);
   d.getElementById('profile-name').click();assert.equal(ui.w.location.pathname,'/archive');assert.equal(d.getElementById('login-dialog').open,false);
   d.getElementById('sign-out').click();await waitFor(()=>d.getElementById('new-entry').hidden);assert.equal(d.getElementById('sign-in').hidden,false);
+});
+
+
+test('home merges every space, opens matching content, and promotes edits without duplicate cards',async t=>{
+  const stamp=day=>'2026-01-'+String(day).padStart(2,'0')+'T00:00:00Z';
+  const ui=await editor(t,{DEV_LOCAL:true},{seed:data=>{
+    data.entries=[{id:'note',revision:'n',title:'Archived note',body:'Actual body',summary:'',date:'2026-01-01',category:'study',tags:[],sourceUrl:'',createdAt:stamp(1)}];
+    data.projects=[{id:'site',revision:'p',title:'My website',description:'Site description',label:'WEBSITE',url:'https://example.org/site',createdAt:stamp(2)}];
+    data.library=[{id:'book',revision:'b',title:'My book',creator:'Author',type:'book',purpose:'study',review:'My review',url:'https://example.org/book',entryIds:[],tags:[],createdAt:stamp(3)}];
+    data.topics=[{id:'topic',revision:'t',title:'My interest',note:'Topic detail',parentId:'',entryIds:[],createdAt:stamp(4)}];
+    data.cvitems=[{id:'cv',revision:'c',title:'My experience',subtitle:'Role',period:'2026',section:'experience',body:'',url:'',order:0,createdAt:stamp(5)}];
+    data.profile.sectionUpdatedAt={about:stamp(6)};
+  }}),d=ui.document,w=ui.w;
+  const kinds=()=>[...d.querySelectorAll('#recent-posts button')].map(e=>e.dataset.updateKind);
+  const open=kind=>d.querySelector('#recent-posts [data-update-kind="'+kind+'"]').click();
+  assert.deepEqual(kinds(),['profile','cvitems','topics','library','projects']);
+  open('projects');assert.equal(w.location.pathname,'/dev');assert.equal(d.activeElement.dataset.projectId,'site');assert.equal(d.querySelector('.project-link').href,'https://example.org/site');
+  w.ArchiveUI.navigate('/');open('library');assert.equal(w.location.pathname,'/library');assert.equal(d.getElementById('detail-title').textContent,'My book');d.querySelector('#detail-dialog .close-dialog').click();
+  w.ArchiveUI.navigate('/');open('topics');assert.equal(w.location.pathname,'/interests');assert.match(d.getElementById('topic-detail').textContent,/Topic detail/);
+  w.ArchiveUI.navigate('/');open('cvitems');assert.equal(w.location.pathname,'/cv');assert.equal(d.activeElement.dataset.cvId,'cv');
+  w.ArchiveUI.navigate('/');open('profile');assert.equal(w.location.pathname,'/about');
+  w.ArchiveUI.navigate('/');const select=d.getElementById('recent-sort');select.value='oldest';select.dispatchEvent(new w.Event('change'));open('entries');assert.equal(d.getElementById('reader-body').textContent,'Actual body');d.querySelector('#reader .close-dialog').click();
+  select.value='recent';select.dispatchEvent(new w.Event('change'));open('projects');d.querySelector('.project-controls button').click();const form=d.getElementById('editor-form');form.elements.description.value='Edited site';ui.submit(form);await waitFor(()=>!d.getElementById('editor').open);
+  assert.equal(kinds()[0],'projects');assert.equal(kinds().filter(k=>k==='projects').length,1);
+  const project=(await ui.store.read()).data.projects[0];assert.equal(project.createdAt,stamp(2));assert(project.updatedAt>stamp(6));
+  d.querySelector('.project-controls .danger').click();d.getElementById('confirm-delete').click();await waitFor(()=>!d.getElementById('confirm-dialog').open);
+  await waitFor(()=>!kinds().includes('projects'));assert.equal(d.querySelectorAll('#recent-posts .recent-card').length,5);
+});
+
+test('mobile swipes follow directly on either axis, suppress drag clicks, and keep taps working',async t=>{
+  const ui=await editor(t),w=ui.w,d=ui.document,orbit=d.getElementById('orbit');
+  w.innerWidth=390;w.matchMedia=()=>({matches:false});
+  orbit.getBoundingClientRect=()=>({left:0,top:0,width:320,height:168});
+  const outline=d.getElementById('orbit-shape').getAttribute('d');
+  const pointer=(target,type,x,y)=>{const event=new w.MouseEvent(type,{button:0,clientX:x,clientY:y,bubbles:true,cancelable:true});Object.defineProperties(event,{pointerId:{value:1},pointerType:{value:'touch'},isPrimary:{value:true}});target.dispatchEvent(event);};
+  pointer(orbit,'pointerdown',25,80);pointer(orbit,'pointermove',25,100);
+  assert(Math.abs(Number(orbit.dataset.rotation))>5,'vertical swipes on the ring must rotate instead of being discarded');
+  pointer(orbit,'pointerup',25,100);
+  const link=orbit.querySelector('a'),before=Number(orbit.dataset.rotation);
+  pointer(link,'pointerdown',25,80);pointer(orbit,'pointermove',65,80);
+  const moved=Number(orbit.dataset.rotation)-before;assert(Math.abs(moved)>10,'horizontal swipes must not stall on the steep side of the ring');
+  pointer(orbit,'pointermove',105,80);assert(Math.abs((Number(orbit.dataset.rotation)-before)-2*moved)<.03,'equal finger movements stay consistent around bends');
+  pointer(orbit,'pointerup',105,80);link.dispatchEvent(new w.MouseEvent('click',{button:0,detail:1,bubbles:true,cancelable:true}));assert.equal(w.location.pathname,'/');
+  pointer(link,'pointerdown',25,80);pointer(link,'pointerup',25,80);link.dispatchEvent(new w.MouseEvent('click',{button:0,detail:1,bubbles:true,cancelable:true}));assert.equal(w.location.pathname,'/interests');
+  assert.equal(d.getElementById('orbit-shape').getAttribute('d'),outline);
 });

@@ -91,6 +91,7 @@ body:has(#home:not([hidden]))>footer{display:none}
 
 /* On mobile, show the owner's content without the default editorial filler. */
 @media(max-width:800px){
+  .orbit{touch-action:none}
   .template-copy{display:none!important}
   .section-heading:has(>.template-copy):not(:has(>button:not([hidden]))),.resume-section:has(.resume-empty){display:none}
   .empty-state:has(>.template-copy){padding:0}
