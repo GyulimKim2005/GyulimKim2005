@@ -85,6 +85,6 @@ body:has(#home:not([hidden]))>footer{display:none}
 .portrait-frame:has(img:not([hidden])) .portrait-lace{display:none}
 .rabbit .rabbit-color-art{filter:none}
 @media(min-width:801px){.home-lace{position:fixed}.lace-top{width:min(9.375vw,16.666667svh)}.lace-bottom{width:min(20.507813vw,36.458333svh)}}
-@media(max-width:800px){.home{position:relative}.lace-top{width:48px}.lace-bottom{width:140px}}
+@media(max-width:800px){.home{position:relative}.lace-top{display:none}.lace-bottom{width:140px;filter:url(#ink-only)}}
 
 .about-label{display:flex;align-items:center;justify-content:flex-end;gap:.22em;font-weight:400;line-height:1.15;text-decoration:none}.about-arrow{display:block;width:1em;height:1.05em;flex:none}.orbit-label{font-weight:400}.recent-toolbar{font-weight:400}.recent-label option{font-family:var(--label)}
