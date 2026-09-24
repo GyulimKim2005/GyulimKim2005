@@ -4,15 +4,16 @@
   if(!orbit)return;
   const items=[...orbit.querySelectorAll('[data-orbit-index]')];
   const path=document.getElementById('orbit-path');
-  const angles=[-128,-195,-257,-307,-378];
-  const cx=490,cy=280,rx=400,ry=200;
+  // Coordinates fitted to the five icon centres in the user's 2048×1152 artwork.
+  const angles=[-130.21313947,-192.06835297,-254.54367139,-303.87817211,-374.90145963];
+  const width=1016,height=533,cx=500.8930192,cy=276.3526379,rx=397.64467188,ry=203.87399943,tilt=-.02065380861;
   let rotation=0,gesture=null,frame=0,suppressUntil=0;
   const radians=angle=>angle*Math.PI/180;
-  const point=angle=>({x:cx+rx*Math.cos(radians(angle)),y:cy+ry*Math.sin(radians(angle))});
+  const point=angle=>{const x=rx*Math.cos(radians(angle)),y=ry*Math.sin(radians(angle));return {x:cx+x*Math.cos(tilt)-y*Math.sin(tilt),y:cy+x*Math.sin(tilt)+y*Math.cos(tilt)};};
   function render(){
     items.forEach((item,i)=>{
       const p=point(angles[i]+rotation);
-      item.style.left=p.x/10+'%';item.style.top=p.y/560*100+'%';
+      item.style.left=p.x/width*100+'%';item.style.top=p.y/height*100+'%';
     });
     const points=[];
     for(let i=0;i<=100;i++){const p=point(angles[0]+rotation+(angles[4]-angles[0])*i/100);points.push((i?'L':'M')+p.x.toFixed(2)+' '+p.y.toFixed(2));}
@@ -29,7 +30,8 @@
   }
   function pointerAngle(event){
     const bounds=orbit.getBoundingClientRect();
-    return Math.atan2(((event.clientY-bounds.top)/bounds.height*560-cy)/ry,((event.clientX-bounds.left)/bounds.width*1000-cx)/rx)*180/Math.PI;
+    const x=(event.clientX-bounds.left)/bounds.width*width-cx,y=(event.clientY-bounds.top)/bounds.height*height-cy;
+    return Math.atan2((-x*Math.sin(tilt)+y*Math.cos(tilt))/ry,(x*Math.cos(tilt)+y*Math.sin(tilt))/rx)*180/Math.PI;
   }
   orbit.addEventListener('dragstart',event=>event.preventDefault());
   orbit.addEventListener('pointerdown',event=>{

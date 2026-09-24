@@ -52,6 +52,21 @@ test('home shows only the latest five and search includes older archive records'
   assert.equal(ui.w.location.pathname,'/archive');assert.equal(d.getElementById('home').hidden,true);assert.equal(d.querySelectorAll('#entries .entry-row').length,1);assert.match(d.getElementById('entries').textContent,/기록 0/);
 });
 
+test('recent frames survive loading, failed requests and recovery',async t=>{
+  const dom=new JSDOM(await readFile('public/index.html','utf8'),{url:'https://archive.test',runScripts:'outside-only'}),w=dom.window,d=w.document;
+  t.after(()=>w.close());w.scrollTo=()=>{};
+  assert.equal(d.querySelectorAll('#recent-posts .recent-card').length,5);
+  let recover=false;
+  w.fetch=async path=>path==='/api/session'?Response.json({canEdit:false}):recover?Response.json({profile:{name:'Gyulim Kim',affiliation:'SNU CSE 24',bio:'',interests:[]},entries:[],projects:[],library:[],topics:[],cvitems:[]}):Response.json({error:'Offline'},{status:503});
+  w.eval(await readFile('public/app.js','utf8'));
+  await waitFor(()=>d.querySelector('.recent-error'));
+  assert.equal(d.querySelectorAll('#recent-posts .recent-card').length,5);
+  recover=true;d.querySelector('.recent-error button').click();
+  await waitFor(()=>!d.querySelector('.recent-error'));
+  assert.equal(d.querySelectorAll('#recent-posts .recent-card').length,5);
+  assert.match(d.getElementById('recent-posts').textContent,/아직 등록한 기록/);
+});
+
 test('web recommendations show sources and prepare an unsaved library record',async t=>{
   const ui=await editor(t,{DEV_LOCAL:true,AI_SEARCH_ENABLED:'true',OPENAI_API_KEY:'test-only-fake-key'},{fetchImpl:async()=>Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[{url:'https://example.org/verified',title:'Verified publisher'}]}},{type:'message',content:[{type:'output_text',text:JSON.stringify({results:[{title:'검색된 책',creator:'Author',type:'book',url:'https://example.org/verified',reason:'추천 설명'}]})}]}]})}),d=ui.document;
   d.getElementById('discover-query').value='새로운 책';ui.submit(d.getElementById('discover-form'));

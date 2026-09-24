@@ -45,9 +45,14 @@
     button.append(content);if(cls==='entry-row')button.append(node('span','entry-arrow','↗'));
     button.addEventListener('click',()=>readEntry(entry.id));return button;
   }
+  function recentPlaceholder(message=''){
+    const placeholder=node('div','recent-card recent-placeholder');
+    if(message)placeholder.append(node('p','',message));else placeholder.setAttribute('aria-hidden','true');
+    return placeholder;
+  }
   function renderRecent(){
     const latest=sortedEntries().slice(0,5);$('recent-posts').replaceChildren(...latest.map(e=>entryButton(e,'recent-card')));
-    if(!latest.length){for(let i=0;i<5;i++){const placeholder=node('div','recent-card recent-placeholder');if(i===0)placeholder.append(node('p','','아직 등록한 기록이 없어요.'));else placeholder.setAttribute('aria-hidden','true');$('recent-posts').append(placeholder);}}
+    for(let i=latest.length;i<5;i++)$('recent-posts').append(recentPlaceholder(i===0?'아직 등록한 기록이 없어요.':''));
     $('publication-list').replaceChildren(...sortedEntries().filter(e=>e.category==='publication').map(e=>entryButton(e)));
     $('publication-list').hidden=!state.entries.some(e=>e.category==='publication');
   }
@@ -103,7 +108,7 @@
     localMode=session.status==='fulfilled'&&session.value.local;
     aiReady=session.status==='fulfilled'&&session.value.aiReady;
     if(content.status==='fulfilled'){state=content.value;render();}else{
-      for(const id of ['entries','recent-posts']){const error=node('div','error-state');error.append(node('p','','기록을 불러오지 못했어요.'),node('small','','잠시 후 다시 연결해 주세요.'));const retry=node('button','subtle-button','다시 불러오기 ↻');retry.type='button';retry.addEventListener('click',load);error.append(retry);$(id).replaceChildren(error);}ownerUI();
+      for(const id of ['entries','recent-posts']){const error=node('div',id==='recent-posts'?'recent-card recent-error':'error-state');error.append(node('p','','기록을 불러오지 못했어요.'));const retry=node('button','subtle-button','다시 불러오기 ↻');retry.type='button';retry.addEventListener('click',load);error.append(retry);$(id).replaceChildren(error);if(id==='recent-posts')for(let i=1;i<5;i++)$(id).append(recentPlaceholder());}ownerUI();
     }
   }
   function readEntry(id){
