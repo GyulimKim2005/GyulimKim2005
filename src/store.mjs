@@ -1,5 +1,6 @@
 import {get,put} from '@vercel/blob';
-export const initialContent=()=>({profile:{name:'Gyulim Kim',affiliation:'SNU CSE ’24',bio:'배우고, 읽고, 만드는 과정에서\n만난 생각들을 모읍니다.',interests:[],revision:null},entries:[],projects:[]});
+export const initialContent=()=>({profile:{name:'Gyulim Kim',affiliation:'SNU CSE ’24',bio:'배우고, 읽고, 만드는 과정에서\n만난 생각들을 모읍니다.',interests:[],revision:null},entries:[],projects:[],library:[],topics:[],cvitems:[]});
+export function normalizeContent(data){return {...data,library:data.library??[],topics:data.topics??[],cvitems:data.cvitems??[]};}
 export class ConflictError extends Error{constructor(){super('다른 곳에서 내용이 변경되었어요. 작성한 내용을 복사해 두고 새로고침해 주세요.');this.status=409;}}
 export function blobStore(token){
   const pathname='personal-archive/content.json';

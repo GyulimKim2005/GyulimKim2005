@@ -1,63 +1,90 @@
 # Gyulim Kim — personal archive
 
-개인 소개, 공부 노트, 읽은 논문, 참여 논문, 직접 만든 사이트를 관리하는 기능 기반입니다.
-현재 화면은 기능 확인용이며, 최종 디자인은 사용자의 미리캔버스 시안에 맞춰 교체할 예정입니다.
-사용자의 실제 기록이나 연구 실적은 임의로 채우지 않았습니다.
+사용자의 미리캔버스 시안을 바탕으로 만든 개인 홈페이지입니다. 실제 기록·서재·이력은 사용자가 직접 입력합니다. Vercel 배포와 운영 저장소는 아직 연결하지 않았습니다.
 
-## 기능
+## 화면과 기능
 
-- 소개·소속·관심 분야 수정
-- 공부 노트 / 읽은 논문 / 참여 논문 분류
-- 기록 작성·읽기·수정·삭제, 제목·본문·날짜·태그·참고 링크
-- 웹사이트 링크 추가·수정·삭제
-- 관리자 키 로그인, 서명된 HttpOnly 세션 쿠키, 로그아웃
-- 변경 충돌 감지, 잘못된 주소·날짜 차단, 저장 실패 시 입력 보존
-- 외부 로그인 없이 방문자는 글을 읽을 수 있고 수정은 관리자만 가능
+- `/`: 원본 토끼·아이콘을 활용한 메인. 궤도는 드래그, 터치, 휠, 좌우 버튼과 방향키로 회전합니다. 클릭과 드래그를 구분합니다.
+- 메인 오른쪽에는 기록 날짜 내림차순으로 **최근 5개**만 표시합니다. 같은 날짜는 생성 시각으로 정렬합니다. 고정 높이 영역 안에서 스크롤하며 검색은 전체 아카이브에서 찾습니다.
+- 토끼를 누르거나 누른 채 쓰다듬으면 꽃잎과 카운트가 반응합니다. **누르는 동안만 횟수가 표시**됩니다. 횟수는 해당 브라우저의 localStorage에 저장하며 사이트 전체 합산은 아닙니다. 키보드 Space/Enter도 지원합니다.
+- `/about`: 자기소개, 소속, 프로필 사진 주소 편집.
+- `/library`: 책장 UI. Paper / Article / Book 및 Study / Leisure 분류, 제목·저자·감상평·태그 검색. 책을 클릭하면 짧은 감상평, 원문 링크, 연결된 아카이브 글이 열립니다.
+- `/interests`: 계층형 마인드맵. 관심사·상위 관심사·설명·연결된 아카이브 글을 편집합니다. 연결된 글에서도 서재와 관심사로 돌아갈 수 있습니다.
+- `/dev`: 만든 사이트 링크 추가·수정·삭제.
+- `/cv`: Education / Research / Experience / Awards / Skills 이력 항목, 기간, 역할, 설명, 순서, 관련 링크. 참여 논문 기록도 연결됩니다. 인쇄·PDF 저장용 스타일이 있습니다.
+- `/archive`: 공부, 읽기 기록, 참여 논문, 생각, 일상을 날짜순으로 보여 주는 블로그 목록. 기록 작성·읽기·수정·삭제, 날짜·태그·참고 링크 지원.
+- 관리자 키 로그인, 서명된 HttpOnly 세션, 변경 충돌 감지, 저장 실패 시 입력 보존.
+- 방문자는 읽기만 가능하며 변경과 AI 웹 검색은 관리자만 가능합니다.
+
+기존 데이터에는 새 컬렉션을 자동으로 보완합니다. 예전 `reading` 기록은 서재에서도 접근할 수 있습니다. 아카이브 글 삭제 시 서재·관심사의 연결을 정리하며, 관심사 삭제 시 하위 항목은 한 단계 위로 옮깁니다.
 
 ## 로컬 실행
 
-Node.js 22.22.2 또는 24.15.0 이상의 지원 LTS 버전에서 실행합니다.
+Node.js 22.22.2 또는 24.15.0 이상의 지원 버전에서 실행합니다.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-http://127.0.0.1:4173 에서 기능을 확인합니다. 이 로컬 서버는 해당 PC에서만 접근할 수 있고 편집 모드로 열립니다. 기록은 `.local/content.json`에 저장되어 서버를 재시작해도 유지됩니다. 브라우저 저장소를 사용하지 않습니다. 로컬 파일은 Git에 포함되지 않습니다.
+[로컬 미리보기](http://127.0.0.1:4173/)는 해당 PC에서만 접근할 수 있으며 자동 편집 모드입니다. 콘텐츠는 `.local/content.json`에 저장됩니다. `.local`, `.env.local`, 관리자 키는 Git에 포함되지 않습니다. 기본 서버는 AI 키가 없는 상태로도 나머지 기능을 사용할 수 있습니다.
 
 ```sh
 npm test
 npm run build
 ```
 
-## 디자인을 바꿀 때
+## AI 웹 추천 연결
 
-`public/index.html`과 `public/styles.css`가 화면, `public/app.js`가 편집 인터페이스입니다. `src/api.mjs`는 화면과 독립적인 기능 API입니다. HTML의 ID를 유지하거나 새 UI에서 아래 API를 호출하면 디자인을 교체할 수 있습니다. 본문은 일반 텍스트이며 사용자 HTML을 실행하지 않습니다.
+서재 하단의 `AI로 새로운 읽을거리 찾기`는 OpenAI Responses API의 웹 검색 도구를 사용합니다. 추천에 출처를 표시하고, 웹 검색에서 반환된 출처 URL과 일치하는 결과만 노출합니다. 추천 결과의 제목·저자·링크를 서재 입력 폼으로 가져올 수 있으며 **감상평은 사용자가 직접 씁니다**.
 
-| 요청 | 역할 |
-| --- | --- |
-| GET /api/content | 소개·기록·사이트 목록 |
-| GET /api/session | 관리자 로그인 상태 |
-| POST /api/login | 로그인 키로 관리자 세션 시작 |
-| POST /api/logout | 관리자 세션 종료 |
-| PUT /api/profile | 소개 수정 |
-| PUT /api/entries/:id | 기록 작성 또는 수정 |
-| DELETE /api/entries/:id | 기록 삭제 |
-| PUT /api/projects/:id | 사이트 링크 작성 또는 수정 |
-| DELETE /api/projects/:id | 사이트 링크 삭제 |
+기본값은 비활성화입니다. 현재 저장소에 API 키가 없으므로 실제 유료 요청은 실행하지 않았습니다. 연결 시 모델·웹 검색 사용료가 별도로 발생합니다. [공식 웹 검색 문서](https://developers.openai.com/api/docs/guides/tools-web-search), [공식 요금 안내](https://developers.openai.com/api/docs/pricing)를 참고하세요.
 
-변경 요청은 JSON과 `X-Archive-Request: 1` 헤더를 사용합니다. 수정·삭제에는 읽어 온 항목의 `revision`을 그대로 전달합니다. 새 항목은 클라이언트가 UUID를 생성합니다. 다른 기기의 변경과 충돌하면 409로 거절하여 내용을 덮어쓰지 않습니다.
+서버 환경변수 또는 로컬의 무시되는 `.env.local`에 다음 값을 설정합니다. 키를 HTML, 브라우저 코드, Git 저장소에 넣지 않습니다.
+
+```dotenv
+OPENAI_API_KEY=본인의_API_키
+AI_SEARCH_ENABLED=true
+OPENAI_SEARCH_MODEL=gpt-4.1-mini
+AI_DAILY_LIMIT=20
+```
+
+기본 하루 20회(UTC 기준), 요청 간 10초, 요청당 최대 2회 도구 호출·2,500 출력 토큰을 제한합니다. 사용 횟수는 저장소에서 원자적으로 예약하여 여러 서버에서도 제한을 공유합니다. 실패한 검색도 예약 횟수에 포함됩니다. 횟수 제한은 금액 한도가 아니므로 API 계정의 사용 한도도 별도로 설정합니다. 웹 검색 결과는 자동으로 게시하거나 저장하지 않습니다.
+
+실제 운영 API 호출은 키 연결 후 검증해야 합니다. 현재는 모의 응답으로 인증·미설정·출처 검사·일일 제한·결과 표시를 검증합니다.
 
 ## Vercel 배포 연결 — 아직 배포하지 않음
 
-기능 준비 단계입니다. 실제 운영 저장소와 관리자 비밀값은 배포 시 연결해야 합니다.
+1. Vercel에서 GitHub 저장소를 가져옵니다. Framework는 Other, `vercel.json` 설정을 사용합니다.
+2. **Private Vercel Blob** 저장소를 연결합니다. `BLOB_READ_WRITE_TOKEN` 환경변수가 필요합니다.
+3. `npm run setup:admin`으로 관리자 키를 생성합니다. `.local/admin-credentials.json`에만 저장되며 기존 파일을 덮어쓰지 않습니다.
+4. 그 파일의 `ADMIN_KEY_HASH`, `SESSION_SECRET`을 서버 환경변수에 추가합니다. `loginKey`로 사이트 하단에서 로그인합니다.
+5. AI 검색을 사용할 경우에만 위의 AI 환경변수를 연결한 뒤 배포합니다.
 
-1. Vercel에서 이 GitHub 저장소를 가져옵니다. Framework는 Other이고 `vercel.json` 설정을 사용합니다.
-2. 해당 프로젝트에 **Private Vercel Blob** 저장소를 연결합니다. `BLOB_READ_WRITE_TOKEN` 환경변수가 필요합니다.
-3. `npm run setup:admin`으로 강한 무작위 관리자 키를 생성합니다. `.local/admin-credentials.json`에만 저장되고 Git에는 올라가지 않습니다. 기존 파일을 덮어쓰지 않습니다.
-4. 그 파일의 `ADMIN_KEY_HASH`, `SESSION_SECRET`을 Vercel의 비밀 환경변수로 추가합니다. `loginKey`는 사이트 하단 관리자 로그인에서 본인만 사용합니다.
-5. 배포합니다. 비밀값이 없으면 관리자 기능은 잠긴 상태로 유지됩니다. 운영 코드에서는 로컬 편집 우회가 활성화되지 않습니다.
+운영 데이터는 Private Blob의 `personal-archive/content.json`에 저장합니다. ETag 조건부 저장으로 동시 수정 충돌을 막으며 Vercel 함수의 임시 파일시스템을 콘텐츠 저장소로 쓰지 않습니다. 서버 전용 키는 클라이언트에 노출하지 않습니다.
 
-운영 데이터는 Private Blob의 `personal-archive/content.json`에 저장됩니다. 서버에서 읽기·쓰기하고 ETag 조건부 저장으로 동시 수정 충돌을 막습니다. Vercel 함수의 임시 파일시스템에는 사용자 기록을 저장하지 않습니다. 서버 전용 키는 클라이언트에 제공되지 않습니다.
+## 코드와 데이터
 
-현재 검증 범위: 로컬 파일 영속성, API·인증·편집 폼 DOM 통합 테스트 9개, 클라이언트 구문 검사. 실제 브라우저 시각 검증은 최종 디자인 반영 시 진행합니다. 실제 Vercel/Blob 연결 검증은 배포 시 진행합니다.
+- `public/index.html`, `styles.css`: 메인과 내부 페이지. 메인에 쓰인 `assets/miricanvas-home.png`는 사용자가 제공한 원본입니다. SVG viewBox와 브라우저 필터로 필요한 그림을 보여 줍니다.
+- `public/app.js`: 경로 이동, 로그인, 공통 글쓰기와 읽기, 최근 글.
+- `public/orbit.js`, `rabbit.js`: 궤도 조작과 쓰다듬기.
+- `public/spaces.js`: 서재, 마인드맵, 이력서, AI 검색 UI.
+- `src/api.mjs`, `auth.mjs`, `store.mjs`: 인증, 검증, 영속 저장.
+- `src/discovery.mjs`: 관리자 전용 웹 추천, 출처 검사와 사용량 제한.
+
+| 요청 | 역할 |
+| --- | --- |
+| GET /api/content | 소개·기록·사이트·서재·관심사·이력 |
+| GET /api/session | 관리자 상태와 AI 준비 여부 |
+| POST /api/login, /api/logout | 로그인·로그아웃 |
+| PUT /api/profile | 소개 수정 |
+| PUT, DELETE /api/entries/:id | 아카이브 글 |
+| PUT, DELETE /api/projects/:id | 만든 사이트 |
+| PUT, DELETE /api/library/:id | 서재 |
+| PUT, DELETE /api/topics/:id | 마인드맵 관심사 |
+| PUT, DELETE /api/cvitems/:id | 이력서 항목 |
+| POST /api/discover | AI 웹 검색 추천 |
+
+변경 요청은 JSON과 `X-Archive-Request: 1` 헤더를 사용합니다. 수정·삭제는 읽어 온 `revision`을 전달하고, 충돌은 409로 거절합니다. 본문은 일반 텍스트이며 사용자 HTML을 실행하지 않습니다.
+
+현재 검증: API·인증·저장·편집·연결·AI 제어·토끼·궤도 자동 테스트, JS 구문 검사, PC·모바일 브라우저 점검. 운영 Vercel/Blob 및 실제 AI 호출 검증은 연결 후 진행해야 합니다.

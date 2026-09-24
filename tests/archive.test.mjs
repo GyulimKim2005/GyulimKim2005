@@ -66,3 +66,32 @@ test('missing production auth fails closed and storage failures are explicit',as
   const missing=await handleApi(request('/api/login','POST',{key:'x'}),{env:{},store});assert.equal(missing.status,503);
   const failure=await handleApi(request('/api/content'),{env,store});assert.equal(failure.status,503);assert.match((await failure.json()).error,/작성한 내용은 유지/);
 });
+
+test('library, mind map and resume persist with valid references and deletion cleanup',async t=>{
+  const {store}=await setup(t),context={env,store};
+  await handleApi(request('/api/entries/linked','PUT',entry,{owner:true}),context);
+  const book={title:'자료 제목',creator:'저자',type:'book',purpose:'leisure',review:'짧은 감상',url:'https://example.org/book',entryIds:['linked'],tags:[],revision:null};
+  const saved=await handleApi(request('/api/library/book','PUT',book,{owner:true}),context);assert.equal(saved.status,200);const first=await saved.json();
+  for(const change of [{url:'javascript:alert(1)'},{type:'other'},{purpose:'other'},{entryIds:['missing']}]){const bad=await handleApi(request('/api/library/invalid','PUT',{...book,...change},{owner:true}),context);assert.ok([400,409].includes(bad.status));}
+  const root=await (await handleApi(request('/api/topics/root','PUT',{title:'Root',note:'',parentId:'',entryIds:['linked']},{owner:true}),context)).json();
+  await handleApi(request('/api/topics/child','PUT',{title:'Child',note:'',parentId:'root',entryIds:[]},{owner:true}),context);
+  const cycle=await handleApi(request('/api/topics/root','PUT',{...root,parentId:'child'},{owner:true}),context);assert.equal(cycle.status,400);
+  const cv=await handleApi(request('/api/cvitems/education','PUT',{section:'education',title:'School',period:'2026',subtitle:'',body:'',url:'',order:0},{owner:true}),context);assert.equal(cv.status,200);
+  const record=(await store.read()).data.entries[0];await handleApi(request('/api/entries/linked','DELETE',{revision:record.revision},{owner:true}),context);
+  const data=(await store.read()).data;assert.deepEqual(data.library[0].entryIds,[]);assert.notEqual(data.library[0].revision,first.revision);assert.deepEqual(data.topics[0].entryIds,[]);
+  await handleApi(request('/api/topics/root','DELETE',{revision:data.topics[0].revision},{owner:true}),context);assert.equal((await store.read()).data.topics[0].parentId,'');
+  const unauth=await handleApi(request('/api/library/anonymous','PUT',book),context);assert.equal(unauth.status,403);
+});
+
+test('AI search is owner-only, disabled by default, source-checked and daily limited',async t=>{
+  const {store}=await setup(t);let calls=0;
+  const fetchImpl=async(url,options)=>{calls++;assert.equal(url,'https://api.openai.com/v1/responses');const body=JSON.parse(options.body);assert.equal(body.tool_choice,'required');assert.equal(body.store,false);
+    return Response.json({status:'completed',output:[{type:'web_search_call',action:{sources:[{url:'https://example.org/paper',title:'Publisher'}]}},{type:'message',content:[{type:'output_text',text:JSON.stringify({results:[{title:'Verified work',creator:'Author',type:'paper',url:'https://example.org/paper',reason:'추천 이유'},{title:'Invented',creator:'',type:'book',url:'https://not-sourced.example/book',reason:'No source'}]})}]}]});};
+  const search={query:'읽을거리',type:'all',purpose:'study'};
+  const denied=await handleApi(request('/api/discover','POST',search),{env,store,fetchImpl});assert.equal(denied.status,403);
+  const disabled=await handleApi(request('/api/discover','POST',search,{owner:true}),{env,store,fetchImpl});assert.equal(disabled.status,503);assert.equal(calls,0);
+  const active={...env,AI_SEARCH_ENABLED:'true',OPENAI_API_KEY:'fake-test-key',AI_DAILY_LIMIT:'1'};
+  const success=await handleApi(request('/api/discover','POST',search,{owner:true}),{env:active,store,fetchImpl});assert.equal(success.status,200);const result=await success.json();assert.equal(result.results.length,1);assert.equal(result.results[0].sourceTitle,'Publisher');
+  const capped=await handleApi(request('/api/discover','POST',search,{owner:true}),{env:active,store,fetchImpl});assert.equal(capped.status,429);assert.equal(calls,1);
+  const content=await (await handleApi(request('/api/content'),{env:active,store})).json();assert.equal(content.aiUsage,undefined);
+});
