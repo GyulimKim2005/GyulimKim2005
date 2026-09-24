@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" href="/assets/lace-favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <link rel="preload" href="/assets/fonts/hanyongun.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><script src="/app.js" defer></script><script src="/orbit.js" defer></script><script src="/rabbit.js" defer></script><script src="/spaces.js" defer></script>
+  <link rel="preload" href="/assets/fonts/hanyongun.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/rooms.css"><script src="/app.js" defer></script><script src="/orbit.js" defer></script><script src="/rabbit.js" defer></script><script src="/spaces.js" defer></script>
 </head>
 <body>
   <svg width="0" height="0" aria-hidden="true" style="position:absolute"><defs><filter id="ink-only" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -0.6 -0.6 -0.6 0 1.5"/><feComposite in2="SourceGraphic" operator="in"/></filter></defs></svg>
@@ -42,6 +42,14 @@
     </aside>
   </main>
   <main id="inner-page" class="inner-page" hidden>
+    <div class="room-scene" aria-hidden="true"><img id="room-scene-image" alt="" width="1440" height="810"></div>
+    <div class="room-mobile-art" aria-hidden="true">
+      <svg class="room-desk" data-room-art="dev" viewBox="98 448 339 267" focusable="false"><image href="/assets/rooms/dev.png" width="1440" height="810"/></svg>
+      <svg class="room-bookcase" data-room-art="archive" viewBox="80 244 163 485" focusable="false"><image href="/assets/rooms/archive.png" width="1440" height="810"/></svg>
+      <svg class="room-writing-desk" data-room-art="archive" viewBox="1041 402 317 330" focusable="false"><image href="/assets/rooms/archive.png" width="1440" height="810"/></svg>
+      <svg class="room-books" data-room-art="library" viewBox="288 487 794 231" focusable="false"><image href="/assets/rooms/library.png" width="1440" height="810"/></svg>
+      <svg class="room-chair" data-room-art="library" viewBox="1168 486 164 231" focusable="false"><image href="/assets/rooms/library.png" width="1440" height="810"/></svg>
+    </div>
     <header class="inner-header"><a href="/" data-route class="home-link">← <span id="inner-name">Gyulim Kim</span></a><nav aria-label="페이지 메뉴"><a href="/about" data-route>ABOUT ME</a><a href="/interests" data-route>INTERESTS</a><a href="/dev" data-route>DEV</a><a href="/archive" data-route>ARCHIVE</a><a href="/library" data-route>LIBRARY</a><a href="/cv" data-route>CV</a></nav></header>
     <div class="page-heading"><div><p class="eyebrow template-copy" id="page-kicker">PERSONAL ARCHIVE</p><h1 id="page-title" tabindex="-1">Archive</h1><p id="page-description" class="template-copy"></p></div><button id="edit-profile" class="subtle-button owner-only" type="button" hidden>소개 · 관심사 · CV 수정 ↗</button></div>
     <section id="about-page" class="profile-page" hidden><div class="about-copy"><p id="about-affiliation" class="affiliation"></p><div id="profile-bio" class="prose"></div><a class="text-link" href="https://github.com/GyulimKim2005" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div><div class="about-portrait portrait-frame"><img id="about-photo" alt="Gyulim Kim" hidden></div></section>

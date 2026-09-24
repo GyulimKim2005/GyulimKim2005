@@ -79,7 +79,7 @@
     const depths=topic=>1+Math.max(0,...children(topic.id).map(depths));
     const depth=Math.max(1,...roots.map(depths));const centerX=Math.max(420,depth*200+130),width=centerX*2;
     const left=roots.filter((_,i)=>i%2===0),right=roots.filter((_,i)=>i%2!==0);
-    const span=list=>list.reduce((sum,t)=>sum+leaves(t)*100,0),height=Math.max(480,span(left)+100,span(right)+100),centerY=height/2;
+    const span=list=>list.reduce((sum,t)=>sum+leaves(t)*100,0),height=Math.max(320,span(left)+100,span(right)+100),centerY=height/2;
     map.style.width=width+'px';map.style.height=height+'px';
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('mindmap-lines');svg.setAttribute('viewBox',`0 0 ${width} ${height}`);map.append(svg);
     function edge(x,y,px,py){const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',`M${px} ${py} C${(px+x)/2} ${py},${(px+x)/2} ${y},${x} ${y}`);svg.append(path);}
