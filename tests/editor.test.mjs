@@ -111,10 +111,14 @@ test('shelf, mind map, CV and archive links can be edited from the page',async t
 
 test('rabbit count is visible only while held; orbit rotation does not navigate on drag',async t=>{
   const ui=await editor(t),w=ui.w,d=ui.document,rabbit=d.getElementById('pet-rabbit'),counter=d.getElementById('pet-count');
-  assert.equal(counter.hidden,true);rabbit.dispatchEvent(new w.KeyboardEvent('keydown',{key:' ',bubbles:true}));assert.equal(counter.hidden,false);assert.match(counter.textContent,/1번/);assert.equal(d.querySelectorAll('.petal').length,6);
-  assert.equal(d.querySelectorAll('.petal svg path').length,6);assert.equal(rabbit.classList.contains('petted'),false);
-  assert([...d.querySelectorAll('.petal')].every(p=>parseFloat(p.style.getPropertyValue('--dy'))<=-180));
+  assert.equal(counter.hidden,true);rabbit.dispatchEvent(new w.KeyboardEvent('keydown',{key:' ',bubbles:true}));assert.equal(counter.hidden,false);assert.match(counter.textContent,/1번/);assert.equal(d.querySelectorAll('.petal').length,1);
+  await waitFor(()=>d.querySelectorAll('.petal').length>=3);
+  assert.match(counter.textContent,/1번/);assert.equal(rabbit.classList.contains('petted'),false);
+  assert([...d.querySelectorAll('.petal')].every(p=>p.querySelector('svg path')&&parseFloat(p.style.getPropertyValue('--dy'))<0&&parseFloat(p.style.getPropertyValue('--dx'))>0&&parseFloat(p.style.getPropertyValue('--size'))<=12));
   rabbit.dispatchEvent(new w.KeyboardEvent('keyup',{key:' ',bubbles:true}));assert.equal(counter.hidden,true);assert.equal(w.localStorage.getItem('gyulim-rabbit-pets'),'1');
+  const releasedCount=d.querySelectorAll('.petal').length;
+  await new Promise(resolve=>setTimeout(resolve,350));
+  assert.equal(d.querySelectorAll('.petal').length,releasedCount,'release stops the stream without starting another burst');
   rabbit.dispatchEvent(new w.MouseEvent('pointerdown',{button:0,clientX:10,clientY:10,bubbles:true}));assert.equal(counter.hidden,false);w.dispatchEvent(new w.Event('blur'));assert.equal(counter.hidden,true);
   const orbit=d.getElementById('orbit'),link=orbit.querySelector('a');orbit.getBoundingClientRect=()=>({left:0,top:0,width:1000,height:560});
   const ring=d.getElementById('orbit-path'),fixedRing=ring.getAttribute('d'),initialPosition=link.style.cssText;

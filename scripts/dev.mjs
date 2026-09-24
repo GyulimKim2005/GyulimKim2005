@@ -6,7 +6,7 @@ import {fileStore} from './file-store.mjs';
 try{process.loadEnvFile('.env.local');}catch(error){if(error.code!=='ENOENT')throw error;}
 const port=Number(process.env.PORT||4173);
 const store=fileStore(process.env.LOCAL_CONTENT_FILE||'.local/content.json');
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png'};
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.woff2':'font/woff2'};
 const server=http.createServer(async(req,res)=>{
   try{
     const method=req.method||'GET';
@@ -18,7 +18,7 @@ const server=http.createServer(async(req,res)=>{
     const pathname=new URL(req.url,'http://localhost').pathname;
     const routes=['/','/about','/interests','/dev','/archive','/library','/cv'];
     const file=routes.includes(pathname.replace(/\/$/,'')||'/')?'index.html':pathname.slice(1);
-    if(!['index.html','app.js','orbit.js','rabbit.js','spaces.js','styles.css','assets/miricanvas-home.png','assets/paper-background.png'].includes(file)){res.writeHead(404);res.end('Not found');return;}
+    if(!['index.html','app.js','orbit.js','rabbit.js','spaces.js','styles.css','assets/miricanvas-home.png','assets/paper-background.png','assets/lace-reference.png','assets/fonts/hanyongun.woff2'].includes(file)){res.writeHead(404);res.end('Not found');return;}
     res.writeHead(200,{'Content-Type':types[path.extname(file)],'Cache-Control':'no-store'});res.end(await readFile(path.join('public',file)));
   }catch(error){console.error(error.name);res.writeHead(500);res.end('Local server error');}
 });
