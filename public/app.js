@@ -149,7 +149,7 @@
     const pathname=location.pathname.replace(/^\/|\/$/g,'');page=pages[pathname]?pathname:'';query=new URLSearchParams(location.search).get('q')||'';
     filter=page==='library'?'reading':'all';
     $('home').hidden=!!page;$('inner-page').hidden=!page;
-    if(['interests','dev','archive','library','cv'].includes(page)){
+    if(['interests','dev','archive','library'].includes(page)){
       $('inner-page').dataset.room=page;
       const source='/assets/rooms/'+page+'.png';
       if($('room-scene-image').getAttribute('src')!==source)$('room-scene-image').src=source;

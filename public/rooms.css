@@ -1,5 +1,6 @@
 /* The desktop scenes are the owner's original 1440 × 810 designs, unaltered. */
 .room-scene,.room-mobile-art{display:none;pointer-events:none;user-select:none}
+.inner-page:has(>#cv-page:not([hidden])) #page-title{font-family:var(--label);font-weight:400;letter-spacing:0}
 .inner-page[data-room] .template-copy{display:none!important}
 .inner-page[data-room] .section-heading:has(>.template-copy):not(:has(>button:not([hidden]))),.inner-page[data-room] .resume-section:has(.resume-empty){display:none}
 .inner-page[data-room] .empty-state:has(>.template-copy){padding:0}
