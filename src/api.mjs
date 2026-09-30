@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto';
 import {authenticated,configured,verifyKey,sessionCookie,clearCookie} from './auth.mjs';
 import {ConflictError,normalizeContent} from './store.mjs';
 import {discover,discoveryReady} from './discovery.mjs';
+import {validateNoteDocument,noteText,NOTE_VERSION} from './note-document.mjs';
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
 class InputError extends Error{constructor(message,status=400){super(message);this.status=status;}}
 const clean=(value,max,required=false)=>{if(typeof value!=='string'||value.length>max||(required&&!value.trim()))throw new InputError('필수 항목과 글자 수를 확인해 주세요.');return value.trim();};
@@ -22,13 +23,18 @@ function validate(kind,input){
   }
   if(!['study','reading','publication','thoughts','daily'].includes(input.category))throw new InputError('기록 분류를 선택해 주세요.');
   if(typeof input.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(input.date)||Number.isNaN(Date.parse(input.date))||new Date(input.date).toISOString().slice(0,10)!==input.date)throw new InputError('기록 날짜를 확인해 주세요.');
-  return {category:input.category,title:clean(input.title,200,true),summary:clean(input.summary,500),body:clean(input.body,100000,true),tags:tags(input.tags),sourceUrl:link(input.sourceUrl),date:input.date};
+  let body=input.body,rich={};
+  if(input.bodyDoc!==undefined){
+    if(input.bodyVersion!==NOTE_VERSION)throw new InputError('편집기를 새로고침한 뒤 다시 저장해 주세요.');
+    const bodyDoc=validateNoteDocument(input.bodyDoc);body=noteText(bodyDoc);rich={bodyDoc,bodyVersion:NOTE_VERSION};
+  }
+  return {category:input.category,title:clean(input.title,200,true),summary:clean(input.summary,500),body:clean(body,100000,true),...rich,tags:tags(input.tags),sourceUrl:link(input.sourceUrl),date:input.date};
 }
 async function inputOf(request){
   if(request.headers.get('X-Archive-Request')!=='1'||!(request.headers.get('Content-Type')||'').startsWith('application/json'))throw new InputError('올바르지 않은 요청입니다.',403);
   const origin=request.headers.get('Origin');if(origin&&origin!==new URL(request.url).origin)throw new InputError('허용되지 않은 요청입니다.',403);
-  if(Number(request.headers.get('Content-Length')||0)>500000)throw new InputError('내용이 너무 깁니다.',413);
-  const raw=await request.text();if(raw.length>150000)throw new InputError('내용이 너무 깁니다.',413);
+  if(Number(request.headers.get('Content-Length')||0)>3000000)throw new InputError('노트 용량이 너무 커요. 이미지를 줄여 주세요.',413);
+  const raw=await request.text();if(new TextEncoder().encode(raw).length>3000000)throw new InputError('노트 용량이 너무 커요. 이미지를 줄여 주세요.',413);
   let input;try{input=JSON.parse(raw);}catch{throw new InputError('입력 내용을 읽을 수 없어요.');}
   if(!input||typeof input!=='object'||Array.isArray(input))throw new InputError('입력 내용을 확인해 주세요.');return input;
 }
@@ -74,6 +80,7 @@ export async function handleApi(request,{env={},store,fetchImpl=fetch}){
       await store.write(data,snapshot.version);return json({ok:true});
     }
     const now=new Date().toISOString();
+    if(kind==='entries'&&old?.bodyDoc&&!input.bodyDoc)throw new InputError('이 글에는 수식과 서식이 있어요. 페이지를 새로고침한 뒤 새 편집기로 수정해 주세요.',409);
     const value={...validate(kind,input),id,createdAt:old?.createdAt||now,updatedAt:now,revision:randomUUID()};
     if(value.entryIds?.some(ref=>!data.entries.some(entry=>entry.id===ref)))throw new InputError('연결하려는 기록이 삭제되었어요. 새로고침해 주세요.',409);
     if(kind==='topics'){

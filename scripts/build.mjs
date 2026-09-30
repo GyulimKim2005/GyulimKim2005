@@ -1,3 +1,13 @@
 import {execFileSync} from 'node:child_process';
+import {build} from 'esbuild';
+import {mkdir,cp,readdir} from 'node:fs/promises';
 for(const file of ['public/app.js','public/orbit.js','public/rabbit.js','public/spaces.js','src/discovery.mjs','src/api.mjs','src/auth.mjs','src/store.mjs','api/index.js'])execFileSync(process.execPath,['--check',file],{stdio:'inherit'});
 console.log('Client and API syntax checks passed. Static output: public/');
+const bundle=await build({entryPoints:{'study-editor':'src/study-editor.js'},outdir:'public/study',bundle:true,splitting:true,format:'esm',minify:true,target:'es2022',chunkNames:'chunks/[name]-[hash]',legalComments:'linked',metafile:true});
+await mkdir('public/study/vendor',{recursive:true});
+await cp('node_modules/katex/dist','public/study/vendor/katex',{recursive:true});
+await cp('node_modules/mathlive/fonts','public/study/vendor/mathlive/fonts',{recursive:true});
+await mkdir('public/study/licenses',{recursive:true});
+const packages=new Set(Object.keys(bundle.metafile.inputs).map(file=>/^node_modules\/((?:@[^/]+\/)?[^/]+)/.exec(file)?.[1]).filter(Boolean));
+for(const name of packages)for(const file of await readdir('node_modules/'+name))if(/^licen[sc]e(?:\.|$)/i.test(file))await cp('node_modules/'+name+'/'+file,'public/study/licenses/'+name.replaceAll('/','-').replace('@','')+'-'+file+'.txt');
+console.log('Study editor, equation input, and local fonts bundled.');

@@ -6,19 +6,19 @@ import {fileStore} from './file-store.mjs';
 try{process.loadEnvFile('.env.local');}catch(error){if(error.code!=='ENOENT')throw error;}
 const port=Number(process.env.PORT||4173);
 const store=fileStore(process.env.LOCAL_CONTENT_FILE||'.local/content.json');
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.woff2':'font/woff2'};
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png','.woff2':'font/woff2','.woff':'font/woff','.ttf':'font/ttf','.txt':'text/plain; charset=utf-8'};
 const server=http.createServer(async(req,res)=>{
   try{
     const method=req.method||'GET';
     if(req.url.startsWith('/api/')){
-      const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>500000){res.writeHead(413);res.end();return;}chunks.push(chunk);}
+      const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>3000000){res.writeHead(413);res.end();return;}chunks.push(chunk);}
       const request=new Request('http://127.0.0.1:'+port+req.url,{method,headers:req.headers,body:['GET','HEAD'].includes(method)?undefined:Buffer.concat(chunks)});
       const response=await handleApi(request,{env:{...process.env,DEV_LOCAL:true},store});res.writeHead(response.status,Object.fromEntries(response.headers));res.end(await response.text());return;
     }
     const pathname=new URL(req.url,'http://localhost').pathname;
     const routes=['/','/about','/interests','/dev','/archive','/library','/cv'];
     const file=routes.includes(pathname.replace(/\/$/,'')||'/')?'index.html':pathname.slice(1);
-    if(!['index.html','rooms.css','app.js','orbit.js','rabbit.js','spaces.js','styles.css','assets/miricanvas-home.png','assets/paper-background.png','assets/lace-reference.png','assets/lace-favicon.png','assets/rooms/interests.png','assets/rooms/dev.png','assets/rooms/archive.png','assets/rooms/library.png','assets/rooms/cv.png','assets/fonts/hanyongun.woff2'].includes(file)){res.writeHead(404);res.end('Not found');return;}
+    if(!['index.html','rooms.css','app.js','orbit.js','rabbit.js','spaces.js','styles.css','study-loader.js','note-editor.css','assets/miricanvas-home.png','assets/paper-background.png','assets/lace-reference.png','assets/lace-favicon.png','assets/rooms/interests.png','assets/rooms/dev.png','assets/rooms/archive.png','assets/rooms/library.png','assets/rooms/cv.png','assets/fonts/hanyongun.woff2'].includes(file)&&!(/^study\/[a-zA-Z0-9_./-]+$/.test(file)&&!file.includes('..'))){res.writeHead(404);res.end('Not found');return;}
     res.writeHead(200,{'Content-Type':types[path.extname(file)],'Cache-Control':'no-store'});res.end(await readFile(path.join('public',file)));
   }catch(error){console.error(error.name);res.writeHead(500);res.end('Local server error');}
 });

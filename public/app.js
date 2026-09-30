@@ -5,6 +5,7 @@
   let state={profile:null,entries:[],projects:[],library:[],topics:[],cvitems:[]}, owner=false, localMode=false, aiReady=false, filter='all', selected=null, editing=null, deleting=null, dirty=false, saving=false, returnFocus=null, toastTimer;
   const pages={about:['About me','A LITTLE ABOUT ME',''],interests:['Interests','THINGS I LOVE','관심 있는 것, 좋아하는 것.'],dev:['Dev','THINGS I’VE BUILT',''],archive:['Archive','PERSONAL ARCHIVE',''],library:['Library','MY READING ROOM','읽은 논문, 글, 책. 공부와 여가 사이의 책장.'],cv:['CV','CURRICULUM VITAE','']};
   let page=location.pathname.replace(/^\/|\/$/g,''),query=new URLSearchParams(location.search).get('q')||'';
+  let studySession=null,readerCleanup=null,editorLoading=false,editorToken=0,readerToken=0;
   if(!pages[page])page='';
   const node=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;};
   const safeLink=value=>{try{const url=new URL(value);return ['http:','https:'].includes(url.protocol)?url.href:null;}catch{return null;}};
@@ -179,10 +180,12 @@
   }
   function readEntry(id){
     selected=state.entries.find(e=>e.id===id);if(!selected)return;
+    readerCleanup?.();readerCleanup=null;const token=++readerToken;
     $('reader-meta').textContent=labels[selected.category]+' / '+selected.date.replaceAll('-','.');$('reader-title').textContent=selected.title;$('reader-summary').textContent=selected.summary;$('reader-summary').hidden=!selected.summary;$('reader-body').textContent=selected.body;
     const url=safeLink(selected.sourceUrl);$('reader-source').hidden=!url;if(url)$('reader-source').href=url;else $('reader-source').removeAttribute('href');
     window.Spaces?.readRelated(selected.id);
     ownerUI();openDialog($('reader'));
+    if(window.StudyNotesReady)window.StudyNotesReady().then(notes=>{if(token===readerToken&&$('reader').open)readerCleanup=notes.render($('reader-body'),selected);}).catch(()=>{});
   }
   function field(name,label,value='',options={}){
     const wrapper=node('label','field');const title=node('span','field-label',label);if(options.optional)title.append(node('small','','선택'));wrapper.append(title);
@@ -191,8 +194,9 @@
     else input=node(options.multiline?'textarea':'input',options.body?'body-input':'');
     input.name=name;input.value=value??'';if(!options.choices&&!options.multiline)input.type=options.type||'text';if(options.max)input.maxLength=options.max;input.required=!!options.required;if(options.placeholder)input.placeholder=options.placeholder;wrapper.append(input);return wrapper;
   }
-  function openEditor(kind,value=null){
+  async function openEditor(kind,value=null){
     if(!owner)return;
+    studySession?.destroy();studySession=null;const token=++editorToken;editorLoading=false;
     if($('reader').open)closeDialog($('reader'));
     editing={kind,id:value?.id||crypto.randomUUID(),revision:value?.revision??null};dirty=false;$('form-error').hidden=true;$('editor-fields').replaceChildren();$('save-button').disabled=false;$('save-button').textContent='저장하기 ↗';
     const fields=$('editor-fields');const today=new Date();const localDate=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
@@ -207,20 +211,31 @@
       $('editor-title').textContent='나의 소개 · 관심사 · CV';const p=state.profile;editing.revision=p.revision;fields.append(field('name','이름',p.name,{required:true,max:80}),field('affiliation','소속·한 줄 소개',p.affiliation,{optional:true,max:150}),field('photoUrl','프로필 사진 주소',p.photoUrl,{optional:true,type:'url',max:2048,placeholder:'https://'}),field('bio','자기소개',p.bio,{optional:true,multiline:true,max:2000}),field('interests','관심 분야',p.interests.join(', '),{optional:true,max:500,placeholder:'쉼표로 구분해 주세요'}),field('interestsText','관심사 · 취미 이야기',p.interestsText,{optional:true,multiline:true,max:10000}),field('cv','CV에 덧붙일 소개',p.cv,{optional:true,multiline:true,max:20000}),field('cvUrl','CV 문서 링크',p.cvUrl,{optional:true,type:'url',max:2048,placeholder:'https://'}));
     }
     openDialog($('editor'));
+    if(kind==='entries'&&window.StudyNotesReady){
+      editorLoading=true;$('save-button').disabled=true;
+      try{const notes=await window.StudyNotesReady();if(token!==editorToken||!$('editor').open)return;
+        studySession=notes.mount({textarea:$('editor-form').elements.body,form:$('editor-form'),entry:value,id:editing.id,onDirty:()=>dirty=true,onRevision:revision=>editing.revision=revision});
+      }catch(error){$('form-error').textContent='수식 편집기를 불러오지 못했어요. 작성 내용은 유지돼요. 창을 다시 열어 주세요.';$('form-error').hidden=false;}
+      finally{if(token===editorToken){editorLoading=false;$('save-button').disabled=!!value?.bodyDoc&&!studySession;}}
+    }
   }
   function cancelEditor(){if(saving)return;if(dirty&&!window.confirm('저장하지 않은 내용을 닫을까요?'))return;dirty=false;closeDialog($('editor'));}
   $('editor-form').addEventListener('input',()=>dirty=true);
   $('editor-form').addEventListener('submit',async event=>{
-    event.preventDefault();if(saving)return;saving=true;$('form-error').hidden=true;$('save-button').disabled=true;$('save-button').textContent='저장 중…';
+    event.preventDefault();if(saving||editorLoading)return;
+    let rich={};try{if(editing.kind==='entries'&&studySession)rich=studySession.collect();}catch(error){$('form-error').textContent=error.message;$('form-error').hidden=false;return;}
+    saving=true;$('form-error').hidden=true;$('save-button').disabled=true;$('save-button').textContent='저장 중…';
     const values=Object.fromEntries(new FormData($('editor-form')));values.revision=editing.revision;
+    Object.assign(values,rich);
     if(['library','topics'].includes(editing.kind))values.entryIds=new FormData($('editor-form')).getAll('entryIds');
     for(const key of ['tags','interests'])if(key in values)values[key]=values[key].split(',').map(v=>v.trim()).filter(Boolean);
+    studySession?.setSaving(true);
     try{
       const result=await api(editing.kind==='profile'?'/api/profile':`/api/${editing.kind}/${editing.id}`,'PUT',values);
       if(editing.kind==='profile')state.profile=result;else{const collection=state[editing.kind];const index=collection.findIndex(item=>item.id===result.id);if(index>=0)collection[index]=result;else collection.unshift(result);if(editing.kind==='entries')collection.sort((a,b)=>b.date.localeCompare(a.date));}
-      dirty=false;closeDialog($('editor'));render();toast('저장했어요.');
+      studySession?.saved();dirty=false;closeDialog($('editor'));render();toast('저장했어요.');
     }catch(error){$('form-error').textContent=error.message;$('form-error').hidden=false;}
-    finally{saving=false;$('save-button').disabled=false;$('save-button').textContent='저장하기 ↗';}
+    finally{saving=false;studySession?.setSaving(false);$('save-button').disabled=false;$('save-button').textContent='저장하기 ↗';}
   });
   function confirmDelete(kind,value){deleting={kind,value};$('confirm-title').textContent=({entries:'이 기록을 삭제할까요?',projects:'이 사이트 링크를 삭제할까요?',library:'서재에서 이 자료를 삭제할까요?',topics:'이 관심사를 삭제할까요?',cvitems:'이 이력을 삭제할까요?'})[kind];$('delete-error').hidden=true;openDialog($('confirm-dialog'));}
   $('confirm-delete').addEventListener('click',async()=>{
@@ -233,6 +248,10 @@
   for(const id of ['home-photo','about-photo'])$(id).addEventListener('error',()=>$(id).hidden=true);
   document.querySelectorAll('.close-dialog').forEach(button=>button.addEventListener('click',()=>{const dialog=button.closest('dialog');if(dialog.id==='editor')cancelEditor();else closeDialog(dialog);}));
   document.querySelector('.cancel-editor').addEventListener('click',cancelEditor);
+  $('editor').addEventListener('close',()=>{++editorToken;editorLoading=false;studySession?.destroy();studySession=null;});
+  $('reader').addEventListener('close',()=>{++readerToken;readerCleanup?.();readerCleanup=null;});
+  $('print-entry')?.addEventListener('click',()=>{document.body.classList.add('note-print');window.print();});
+  window.addEventListener('afterprint',()=>document.body.classList.remove('note-print'));
   document.querySelectorAll('dialog').forEach(dialog=>{dialog.addEventListener('cancel',event=>{if(dialog.id==='editor'){event.preventDefault();cancelEditor();}});dialog.addEventListener('close',()=>{if(!document.querySelector('dialog[open]')){document.body.classList.remove('modal-open');returnFocus?.focus();}});});
   window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
   function openLogin(){

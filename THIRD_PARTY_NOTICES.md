@@ -10,3 +10,11 @@ The navigation uses **독립서체 한용운 / HAN-YONG-UN**, developed for GS C
 GS칼텍스 독립서체 사용 · © 2025 GS Caltex – All Rights Reserved
 
 The lace and arrow are displayed directly from the owner's supplied composition. The rabbit retains the original supplied raster linework, with separate royal-blue SVG fills inside its flower petals.
+
+## Study editor
+
+- Tiptap and ProseMirror: MIT. https://github.com/ueberdosis/tiptap and https://github.com/ProseMirror
+- MathLive: MIT. https://github.com/arnog/mathlive
+- KaTeX: MIT. https://github.com/KaTeX/KaTeX
+
+The study editor is bundled locally. License notices are included beside the generated JavaScript and copied with the math font assets in `public/study/vendor/` during builds.
